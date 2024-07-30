@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!-- This sdf file is based on schunk_wsg_50.sdf -->
+<sdf version="1.7">
+<model name="octagonal_pyramid">
+  <link name="base">
+    <pose>0 0 0 0 0 0</pose>
+    <visual name="visual">
+      <geometry>
+        <mesh>
+          <scale>1 1 1</scale>
+          <uri>package://symmetries/models/pyramids/octagonal_pyramid.obj</uri>
+        </mesh>
+      </geometry>
+    </visual>
+    <collision name="base_collision">
+      <geometry>
+        <mesh>
+          <scale>1 1 1</scale>
+          <uri>package://symmetries/models/pyramids/octagonal_pyramid.obj</uri>
+        </mesh>
+      </geometry>
+    </collision>
+  </link>
+</model>
+</sdf>
