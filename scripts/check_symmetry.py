@@ -22,8 +22,8 @@ from pydrake.all import (
 
 directives_str = """directives:
 - add_model:
-    name: icosahedron
-    file: package://symmetries/models/icosahedron.sdf
+    name: dodecahedron
+    file: package://symmetries/models/dodecahedron.sdf
 """
 G = src.symmetry.IcosahedralGroup()
 
