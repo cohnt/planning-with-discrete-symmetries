@@ -22,10 +22,10 @@ from pydrake.all import (
 
 directives_str = """directives:
 - add_model:
-    name: hexagonal_prism
-    file: package://symmetries/models/pyramids/hexagonal_pyramid.sdf
+    name: cube
+    file: package://symmetries/models/cube.sdf
 """
-G = src.symmetry.CyclicGroupSO3(6)
+G = src.symmetry.OctahedralGroup()
 
 meshcat = StartMeshcat()
 builder = DiagramBuilder()

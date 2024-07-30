@@ -1,10 +1,10 @@
 import numpy as np
 from enum import Enum
+import itertools
 
 class SymmetryGroupBase():
 	def __init__(self):
 		self.action_dim = -1
-		self.order = -1
 		self.matrices = []
 
 	def orbit(self, point):
@@ -25,7 +25,6 @@ class SymmetryGroupSO3Base(SymmetryGroupBase):
 class CyclicGroupSO3(SymmetryGroupSO3Base):
 	def __init__(self, n):
 		super().__init__()
-		self.order = n
 		self.matrices = []
 		for i in range(n):
 			theta = 2 * np.pi * i / self.order
@@ -44,7 +43,6 @@ class CyclicGroupSO3(SymmetryGroupSO3Base):
 class DihedralGroup(SymmetryGroupSO3Base):
 	def __init__(self, n):
 		super().__init__()
-		self.order = n
 		self.matrices = []
 		for i in range(n):
 			theta = 2 * np.pi * i / self.order
@@ -72,8 +70,18 @@ class TetrahedralGroup(SymmetryGroupSO3Base):
 class OctahedralGroup(SymmetryGroupSO3Base):
 	def __init__(self):
 		super().__init__()
-		raise(NotImplementedError)
-		# TODO
+		self.matrices = []
+		permutations = itertools.permutations([0, 1, 2])
+		for a, b, c in permutations:
+			for i0 in [-1, 1]:
+				for i1 in [-1, 1]:
+					for i2 in [-1, 1]:
+						mat = np.zeros((3,3), dtype=int)
+						mat[0,a] = i0
+						mat[1,b] = i1
+						mat[2,c] = i2
+						if np.linalg.det(mat) > 0:
+							self.matrices.append(mat)
 
 class IcoashedralGroup(SymmetryGroupSO3Base):
 	def __init__(self):
