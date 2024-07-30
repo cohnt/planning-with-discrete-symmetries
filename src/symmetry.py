@@ -2,6 +2,10 @@ import numpy as np
 from enum import Enum
 import itertools
 
+from pydrake.all import (
+	AngleAxis,
+)
+
 class SymmetryGroupBase():
 	def __init__(self):
 		self.action_dim = -1
@@ -64,8 +68,26 @@ class DihedralGroup(SymmetryGroupSO3Base):
 class TetrahedralGroup(SymmetryGroupSO3Base):
 	def __init__(self):
 		super().__init__()
-		raise(NotImplementedError)
-		# TODO
+		self.matrices = []
+		# Vertices are listed to match the vertices used in tetrahedron.obj
+		vertices = [
+			np.array([-0.5, -0.5, -0.5]),
+			np.array([-0.5,  0.5,  0.5]),
+			np.array([ 0.5, -0.5,  0.5]),
+			np.array([ 0.5,  0.5, -0.5])
+		]
+		for axis in vertices:
+			for theta in [-2 * np.pi / 3, 2 * np.pi / 3]:
+				self.matrices.append(AngleAxis(theta,
+						axis / np.linalg.norm(axis)).rotation())
+		edge_midpoints = [
+			0.5 * (vertices[0] + vertices[1]),
+			0.5 * (vertices[0] + vertices[2]),
+			0.5 * (vertices[0] + vertices[3])
+		]
+		for axis in edge_midpoints:
+			self.matrices.append(AngleAxis(np.pi,
+					axis / np.linalg.norm(axis)).rotation())
 
 class OctahedralGroup(SymmetryGroupSO3Base):
 	def __init__(self):
