@@ -2,7 +2,7 @@
 
 # From https://github.com/angerangel/LCR3D
 
-g Object001
+g dodecahedron
 
 v  -0.57735  -0.57735  0.57735
 v  0.934172  0.356822  0

@@ -2,7 +2,7 @@
 
 # From https://github.com/angerangel/LCR3D
 
-g Object001
+g octahedron
 
 v  1  0  0
 v  0  -1  0

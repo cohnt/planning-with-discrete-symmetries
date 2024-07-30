@@ -2,7 +2,7 @@
 
 # From https://github.com/angerangel/LCR3D
 
-g Object001
+g icosahedron
 
 v  0  -0.525731  0.850651
 v  0.850651  0  0.525731
