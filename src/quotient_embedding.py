@@ -1,9 +1,27 @@
 import numpy as np
 import functools
-from dataclasses import dataclass
+import itertools
+from tqdm import tqdm
 
 def tensordot(vecs):
 	return functools.reduce(lambda u, v: np.tensordot(u, v, axes=0), vecs)
+
+def symmetrized_tensor_identity(alpha):
+	assert isinstance(alpha, int)
+	assert alpha % 2 == 0
+	M_alpha = np.zeros([3] * alpha)
+	order = alpha
+
+	for i in tqdm(range(M_alpha.size)):
+		idx_str = np.base_repr(i, 3).zfill(order)
+		idx = tuple([int(foo) for foo in idx_str])
+		for permutation in itertools.permutations(list(range(order))):
+			bar = 1
+			for j1, j2 in zip(permutation[::2], permutation[1::2]):
+				bar *= idx[j1] == idx[j2]
+			M_alpha[idx] += bar
+		M_alpha[idx] /= np.math.factorial(order)
+	return M_alpha
 
 class Embedding:
 	def __init__(self, alpha, u, S, beta=None):
@@ -20,6 +38,28 @@ class Embedding:
 		for u_i in self.u:
 			assert len(u_i) == 3
 		assert len(self.beta) == self.n
+
+		self.M_alpha = self.compute_M_alpha()
+
+	def compute_M_alpha(self):
+		M_alpha = []
+		for alpha_i in self.alpha:
+			if alpha_i % 2 == 0:
+				M_alpha.append(symmetrized_tensor_identity(alpha_i).flatten())
+			else:
+				M_alpha.append(np.zeros(3 ** alpha_i))
+		return np.hstack(M_alpha)
+
+		# M_alpha_entries = []
+		# for i in range(len(self.alpha)):
+		# 	alpha_i = self.alpha[i]
+		# 	if (alpha_i + 1) % 2 == 0:
+		# 		mult = np.math.factorial(alpha_i+1)
+		# 		M_alpha_i = np.zeros(np.power(tuple([3] * alpha_i + 1)))
+		# 		M_alpha_entries.append(symmetrize(tensordot([np.eye(3)] * int((alpha_i + 1) / 2))))
+		# 	else:
+		# 		M_alpha_entries.append(tensordot([np.zeros(3)] * alpha_i).flatten())
+		# return tensordot(M_alpha_entries).flatten()
 
 	def E_alpha_u(self, R):
 		return np.hstack([
@@ -49,7 +89,9 @@ class Embedding:
 if __name__ == "__main__":
 	import symmetry
 
-	# Cyclic group with two elements
+	# print(symmetrized_tensor_identity(4))
+
+	print("\nCyclic group with two elements")
 	alpha = (1, 2, 2)
 	u = np.eye(3)
 	S = symmetry.CyclicGroupSO3(2)
@@ -59,9 +101,10 @@ if __name__ == "__main__":
 	R1 = np.eye(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
 
-	# Octahedral group
+	print("\nOctahedral group")
 	alpha = (4,)
 	u = [np.array([1, 0, 0])]
 	S = symmetry.OctahedralGroup()
@@ -71,9 +114,11 @@ if __name__ == "__main__":
 	R1 = np.eye(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("M_alpha", E.M_alpha)
 
-	# Icosahedral group
+	print("\nIcosahedral group")
 	alpha = (10,)
 	u = [np.array([1, 0, 0])]
 	S = symmetry.IcosahedralGroup()
@@ -83,4 +128,5 @@ if __name__ == "__main__":
 	R1 = np.eye(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
