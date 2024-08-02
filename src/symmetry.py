@@ -19,6 +19,9 @@ class SymmetryGroupBase():
 		assert point.shape == (self.action_dim, self.action_dim)
 		return np.stack(self.matrices) @ point
 
+	def order(self):
+		return len(self.matrices)
+
 class SymmetryGroupSO3Base(SymmetryGroupBase):
 	def __init__(self):
 		super().__init__()
