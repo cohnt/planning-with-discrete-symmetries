@@ -40,6 +40,7 @@ class Embedding:
 		assert len(self.beta) == self.n
 
 		self.M_alpha = self.compute_M_alpha()
+		self.scaled_M_alpha = np.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
 
 	def compute_M_alpha(self):
 		M_alpha = []
@@ -48,7 +49,7 @@ class Embedding:
 				M_alpha.append(symmetrized_tensor_identity(alpha_i).flatten())
 			else:
 				M_alpha.append(np.zeros(3 ** alpha_i))
-		return np.hstack(M_alpha)
+		return M_alpha
 
 		# M_alpha_entries = []
 		# for i in range(len(self.alpha)):
@@ -67,7 +68,7 @@ class Embedding:
 			for u_i, alpha_i in zip(self.u, self.alpha)
 		]).flatten()
 
-	def E_u_alpha_S(self, R):
+	def E_alpha_u_S(self, R):
 		return np.sum([
 			self.E_alpha_u(R @ S_i) for S_i in self.S.matrices
 		]) / self.S.order()
@@ -76,15 +77,21 @@ class Embedding:
 		return np.hstack([
 			beta_i * tensordot([R @ u_i] * alpha_i).flatten()
 			for beta_i, u_i, alpha_i in zip(self.beta, self.u, self.alpha)
-		]).flatten()
+		])
 
 	def E_alpha_beta_u_S(self, R):
 		return np.sum([
 			self.E_alpha_beta_u(R @ S_i) for S_i in self.S.matrices
 		], axis=0) / self.S.order()
 
+	def tilde_E_alpha_u_S(self, R):
+		return self.E_alpha_u_S(R) - self.scaled_M_alpha
+
+	def tilde_E_alpha_beta_u_S(self, R):
+		return self.E_alpha_beta_u_S(R) - self.scaled_M_alpha
+
 	def __call__(self, R):
-		return self.E_alpha_beta_u_S(R)
+		return self.tilde_E_alpha_beta_u_S(R)
 
 if __name__ == "__main__":
 	import symmetry
