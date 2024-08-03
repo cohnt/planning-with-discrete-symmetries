@@ -99,7 +99,7 @@ class Embedding:
 	# 	return self.E_alpha_beta_u_S(R) - self.scaled_M_alpha
 
 	def __call__(self, R):
-		return self.E_alpha_u_S(R)
+		return self.E_alpha_beta_u_S(R)
 
 if __name__ == "__main__":
 	import symmetry
@@ -113,9 +113,10 @@ if __name__ == "__main__":
 	beta = (1/np.sqrt(2), 1/2, 1/2)
 	E = Embedding(alpha, u, S, beta)
 
-	R1 = np.eye(3)
+	R1 = special_ortho_group.rvs(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
+	print(out)
 	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
 
@@ -127,7 +128,7 @@ if __name__ == "__main__":
 	beta = (np.sqrt(5/12), np.sqrt(4)/3)
 	E = Embedding(alpha, u, S, beta)
 
-	R1 = np.eye(3)
+	R1 = special_ortho_group.rvs(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
 	print("Dim", out[0].shape)
@@ -136,12 +137,13 @@ if __name__ == "__main__":
 
 	print("\nTetrahedral group")
 	alpha = (3,)
-	u = [np.array([0.5, 0.5, -0.5])]
+	vec = np.array([0.5, 0.5, -0.5])
+	u = [vec / np.linalg.norm(vec)]
 	S = symmetry.TetrahedralGroup()
 	beta = (3 / (2 * np.sqrt(2)),)
 	E = Embedding(alpha, u, S, beta)
 
-	R1 = np.eye(3)
+	R1 = special_ortho_group.rvs(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
 	print("Dim", out[0].shape)
@@ -156,7 +158,7 @@ if __name__ == "__main__":
 	beta = (3 / (2 * np.sqrt(2)),)
 	E = Embedding(alpha, u, S, beta)
 
-	R1 = np.eye(3)
+	R1 = special_ortho_group.rvs(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
 	print("Dim", out[0].shape)
@@ -174,3 +176,4 @@ if __name__ == "__main__":
 	# out = [E(R) for R in orbit]
 	# print("Dim", out[0].shape)
 	# print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	# print("Should be nonzero:", np.linalg.norm(out[0]))
