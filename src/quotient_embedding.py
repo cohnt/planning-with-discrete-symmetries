@@ -27,7 +27,7 @@ def symmetrized_tensor_identity(alpha):
 	return M_alpha
 
 class Embedding:
-	def __init__(self, alpha, u, S, beta=None, dimension_upper_bound=200):
+	def __init__(self, alpha, u, S, beta=None, dimension_upper_bound=100):
 		self.n = len(alpha)
 		self.alpha = alpha
 		self.u = u
@@ -42,13 +42,14 @@ class Embedding:
 			assert len(u_i) == 3
 		assert len(self.beta) == self.n
 
-		# self.M_alpha = self.compute_M_alpha()
-		# self.scaled_M_alpha = np.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
+		self.M_alpha = self.compute_M_alpha()
+		self.scaled_M_alpha = np.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
 
 		self.dimension_upper_bound = dimension_upper_bound
 
 		self.affine_hull = self.compute_affine_hull()
 		print("Affine hull dimension", self.affine_hull.AffineDimension())
+		# print("Affine hull condtion number", np.linalg.cond(self.affine_hull.basis()))
 
 	def compute_M_alpha(self):
 		M_alpha = []
@@ -66,9 +67,13 @@ class Embedding:
 		# Generate a number of random SO(3) matrices, pass them through the
 		# mapping, and compute the affine hull.
 		xs = special_ortho_group.rvs(3, self.dimension_upper_bound)
-		ys = np.array([self(x) for x in xs]).T
+		ys = np.array([self(x, project=False) for x in xs]).T
 		vpoly = VPolytope(ys)
-		return AffineSubspace(vpoly, tol)
+		raw_ah = AffineSubspace(vpoly, tol)
+		approx_center = np.mean(ys, axis=1)
+		return AffineSubspace(raw_ah.basis(), approx_center)
+		# print(np.linalg.norm(np.zeros(ys.shape[0]) - raw_ah.Projection(np.zeros(ys.shape[0]))[1]))
+		# return AffineSubspace(raw_ah.basis(), np.zeros(ys.shape[0]))
 
 	def E_alpha_u(self, R):
 		return np.hstack([
@@ -98,11 +103,15 @@ class Embedding:
 	def tilde_E_alpha_beta_u_S(self, R):
 		return self.E_alpha_beta_u_S(R) - self.scaled_M_alpha
 
-	def __call__(self, R):
-		# return self.E_alpha_u_S(R)
-		return self.E_alpha_beta_u_S(R)
-		# return self.tilde_E_alpha_u_S(R)
-		# return self.tilde_E_alpha_beta_u_S(R)
+	def __call__(self, R, project=True):
+		# val = self.E_alpha_u_S(R)
+		# val = self.E_alpha_beta_u_S(R)
+		# val = self.tilde_E_alpha_u_S(R)
+		val = self.tilde_E_alpha_beta_u_S(R)
+		if project:
+			return self.affine_hull.ToLocalCoordinates(val).flatten()
+		else:
+			return val
 
 if __name__ == "__main__":
 	import symmetry
@@ -135,7 +144,7 @@ if __name__ == "__main__":
 
 	R1 = special_ortho_group.rvs(3)
 	orbit = S.orbit(R1)
-	out = [E(R) for R in orbit]
+	out = [E(R, True) for R in orbit]
 	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
 	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
@@ -171,20 +180,20 @@ if __name__ == "__main__":
 	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
 	print("Should be nonzero:", np.linalg.norm(out[0]))
 
-	print("\nCyclic group with 6 elements")
-	alpha = (1, 6)
-	u = [e1, e2]
-	S = symmetry.CyclicGroupSO3(6)
-	beta = (np.sqrt(1/12), np.sqrt(8/9))
-	E = Embedding(alpha, u, S, beta)
+	# print("\nCyclic group with 6 elements")
+	# alpha = (1, 6)
+	# u = [e1, e2]
+	# S = symmetry.CyclicGroupSO3(6)
+	# beta = (np.sqrt(1/12), np.sqrt(8/9))
+	# E = Embedding(alpha, u, S, beta)
 
-	R1 = special_ortho_group.rvs(3)
-	orbit = S.orbit(R1)
-	out = [E(R) for R in orbit]
-	print("Dim", out[0].shape)
-	print("Should be practically zero:", np.max(np.var(out, axis=0)))
-	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
-	print("Should be nonzero:", np.linalg.norm(out[0]))
+	# R1 = special_ortho_group.rvs(3)
+	# orbit = S.orbit(R1)
+	# out = [E(R) for R in orbit]
+	# print("Dim", out[0].shape)
+	# print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	# print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	# print("Should be nonzero:", np.linalg.norm(out[0]))
 
 	print("\nDihedral group with 4 elements")
 	alpha = (2,2,2)
@@ -280,17 +289,17 @@ if __name__ == "__main__":
 	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
 	print("Should be nonzero:", np.linalg.norm(out[0]))
 
-	print("\nIcosahedral group")
-	alpha = (10,)
-	u = [np.array([1, 0, 0])]
-	S = symmetry.IcosahedralGroup()
-	beta = (75 / (8 * np.sqrt(95)),)
-	E = Embedding(alpha, u, S, beta)
+	# print("\nIcosahedral group")
+	# alpha = (10,)
+	# u = [np.array([1, 0, 0])]
+	# S = symmetry.IcosahedralGroup()
+	# beta = (75 / (8 * np.sqrt(95)),)
+	# E = Embedding(alpha, u, S, beta)
 
-	R1 = np.eye(3)
-	orbit = S.orbit(R1)
-	out = [E(R) for R in orbit]
-	print("Dim", out[0].shape)
-	print("Should be practically zero:", np.max(np.var(out, axis=0)))
-	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
-	print("Should be nonzero:", np.linalg.norm(out[0]))
+	# R1 = np.eye(3)
+	# orbit = S.orbit(R1)
+	# out = [E(R) for R in orbit]
+	# print("Dim", out[0].shape)
+	# print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	# print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	# print("Should be nonzero:", np.linalg.norm(out[0]))
