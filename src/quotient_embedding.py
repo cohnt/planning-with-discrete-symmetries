@@ -27,7 +27,7 @@ def symmetrized_tensor_identity(alpha):
 	return M_alpha
 
 class Embedding:
-	def __init__(self, alpha, u, S, beta=None, dimension_upper_bound=100):
+	def __init__(self, alpha, u, S, beta=None, dimension_upper_bound=200):
 		self.n = len(alpha)
 		self.alpha = alpha
 		self.u = u
@@ -92,21 +92,41 @@ class Embedding:
 			self.E_alpha_beta_u(R @ S_i) for S_i in self.S.matrices
 		], axis=0) / self.S.order()
 
-	# def tilde_E_alpha_u_S(self, R):
-	# 	return self.E_alpha_u_S(R) - self.scaled_M_alpha
+	def tilde_E_alpha_u_S(self, R):
+		return self.E_alpha_u_S(R) - self.scaled_M_alpha
 
-	# def tilde_E_alpha_beta_u_S(self, R):
-	# 	return self.E_alpha_beta_u_S(R) - self.scaled_M_alpha
+	def tilde_E_alpha_beta_u_S(self, R):
+		return self.E_alpha_beta_u_S(R) - self.scaled_M_alpha
 
 	def __call__(self, R):
+		# return self.E_alpha_u_S(R)
 		return self.E_alpha_beta_u_S(R)
+		# return self.tilde_E_alpha_u_S(R)
+		# return self.tilde_E_alpha_beta_u_S(R)
 
 if __name__ == "__main__":
 	import symmetry
 
 	# print(symmetrized_tensor_identity(4))
 
-	print("\nCyclic group with two elements")
+	e1 = [1, 0, 0]
+	e2 = [0, 1, 0]
+	e3 = [0, 0, 1]
+
+	print("\nCyclic group with 1 element")
+	alpha = (1, 1, 1)
+	u = np.eye(3)
+	S = symmetry.CyclicGroupSO3(1)
+	beta = tuple([1/np.sqrt(2)] * 3)
+	E = Embedding(alpha, u, S, beta)
+	R1 = special_ortho_group.rvs(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be nonzero:", np.linalg.norm(out[0]))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+
+	print("\nCyclic group with 2 elements")
 	alpha = (1, 2, 2)
 	u = np.eye(3)
 	S = symmetry.CyclicGroupSO3(2)
@@ -116,10 +136,100 @@ if __name__ == "__main__":
 	R1 = special_ortho_group.rvs(3)
 	orbit = S.orbit(R1)
 	out = [E(R) for R in orbit]
-	print(out)
 	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
 
+	print("\nCyclic group with 3 elements")
+	alpha = (1, 3)
+	u = [e1, e2]
+	S = symmetry.CyclicGroupSO3(3)
+	beta = (np.sqrt(5/6), np.sqrt(4)/3)
+	E = Embedding(alpha, u, S, beta)
+
+	R1 = special_ortho_group.rvs(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
+
+	print("\nCyclic group with 4 elements")
+	alpha = (1, 4)
+	u = [e1, e2]
+	S = symmetry.CyclicGroupSO3(4)
+	beta = (np.sqrt(1/2), np.sqrt(1/2))
+	E = Embedding(alpha, u, S, beta)
+
+	R1 = special_ortho_group.rvs(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
+
+	print("\nCyclic group with 6 elements")
+	alpha = (1, 6)
+	u = [e1, e2]
+	S = symmetry.CyclicGroupSO3(6)
+	beta = (np.sqrt(1/12), np.sqrt(8/9))
+	E = Embedding(alpha, u, S, beta)
+
+	R1 = special_ortho_group.rvs(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
+
+	print("\nDihedral group with 4 elements")
+	alpha = (2,2,2)
+	u = [e1, e2, e3]
+	S = symmetry.DihedralGroup(2)
+	beta = tuple([1/2] * 3)
+	E = Embedding(alpha, u, S, beta)
+
+	R1 = special_ortho_group.rvs(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
+
+	print("\nDihedral group with 6 elements")
+	alpha = (2,3)
+	u = [e1, e2]
+	S = symmetry.DihedralGroup(3)
+	beta = [np.sqrt(5/12), np.sqrt(4/9)]
+	E = Embedding(alpha, u, S, beta)
+
+	R1 = special_ortho_group.rvs(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
+
+	print("\nDihedral group with 8 elements")
+	alpha = (2,4)
+	u = [e1, e2]
+	S = symmetry.DihedralGroup(4)
+	beta = [1/2, np.sqrt(1/2)]
+	E = Embedding(alpha, u, S, beta)
+
+	R1 = special_ortho_group.rvs(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
 
 	print("\nDihedral group with 12 elements")
 	alpha = (2,3)
@@ -133,6 +243,8 @@ if __name__ == "__main__":
 	out = [E(R) for R in orbit]
 	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
 
 
 	print("\nTetrahedral group")
@@ -148,6 +260,8 @@ if __name__ == "__main__":
 	out = [E(R) for R in orbit]
 	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
 
 
 	print("\nOctahedral group")
@@ -163,17 +277,20 @@ if __name__ == "__main__":
 	out = [E(R) for R in orbit]
 	print("Dim", out[0].shape)
 	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
 
-	# print("\nIcosahedral group")
-	# alpha = (10,)
-	# u = [np.array([1, 0, 0])]
-	# S = symmetry.IcosahedralGroup()
-	# beta = (75 / (8 * np.sqrt(95)),)
-	# E = Embedding(alpha, u, S, beta)
+	print("\nIcosahedral group")
+	alpha = (10,)
+	u = [np.array([1, 0, 0])]
+	S = symmetry.IcosahedralGroup()
+	beta = (75 / (8 * np.sqrt(95)),)
+	E = Embedding(alpha, u, S, beta)
 
-	# R1 = np.eye(3)
-	# orbit = S.orbit(R1)
-	# out = [E(R) for R in orbit]
-	# print("Dim", out[0].shape)
-	# print("Should be practically zero:", np.max(np.var(out, axis=0)))
-	# print("Should be nonzero:", np.linalg.norm(out[0]))
+	R1 = np.eye(3)
+	orbit = S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
