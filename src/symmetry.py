@@ -17,7 +17,7 @@ class SymmetryGroupBase():
 		# corresponding to all possible equivalent orientations.
 		assert isinstance(point, np.ndarray)
 		assert point.shape == (self.action_dim, self.action_dim)
-		return np.stack(self.matrices) @ point
+		return point @ np.stack(self.matrices)
 
 	def order(self):
 		return len(self.matrices)
