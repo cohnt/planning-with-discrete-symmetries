@@ -4,6 +4,7 @@ sys.path.append("..")
 import numpy as np
 import pathlib
 import time
+from scipy.stats import special_ortho_group
 
 import src.symmetry
 
@@ -65,6 +66,7 @@ diagram_context = diagram.CreateDefaultContext()
 plant_context = plant.GetMyContextFromRoot(diagram_context)
 
 mat = np.eye(3)
+mat = special_ortho_group.rvs(3)
 tfs_so3 = G.orbit(mat)
 
 for tf_so3 in tfs_so3:
