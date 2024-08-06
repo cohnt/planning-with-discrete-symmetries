@@ -46,6 +46,7 @@ class Embedding:
 
 		self.M_alpha = self.compute_M_alpha()
 		self.scaled_M_alpha = np.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
+		self.tilde_M_alpha = np.hstack([M_alpha_i * beta_i / (alpha_i + 1) for M_alpha_i, beta_i, alpha_i in zip(self.M_alpha, self.beta, self.alpha)])
 
 		self.dimension_upper_bound = dimension_upper_bound
 
@@ -113,7 +114,8 @@ class Embedding:
 		return self.E_alpha_u_S(R) - self.scaled_M_alpha
 
 	def tilde_E_alpha_beta_u_S(self, R):
-		return self.E_alpha_beta_u_S(R) - self.scaled_M_alpha
+		# TODO: Maybe adjust per response from paper authors
+		return self.E_alpha_beta_u_S(R) - self.tilde_M_alpha
 
 	def __call__(self, R, project=True):
 		# val = self.E_alpha_u_S(R)
