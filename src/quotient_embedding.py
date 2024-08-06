@@ -71,12 +71,21 @@ class Embedding:
 		xs = special_ortho_group.rvs(3, self.dimension_upper_bound)
 		ys = np.array([self(x, project=False) for x in xs]).T
 
+		# Calculate basis with SVD. Center the data first.
 		U, S, V = np.linalg.svd(ys - ys[:,[0]])
 		dimension = np.count_nonzero(np.abs(S) > tol)
 		basis = U[:,0:dimension]
 
-		approx_center = np.mean(ys, axis=1)
-		return AffineSubspace(basis, approx_center)
+		# Calculate the center per https://stackoverflow.com/a/72231029/9796174
+		tmp_ah = AffineSubspace(basis, ys[:,0])
+		local = tmp_ah.ToLocalCoordinates(ys)
+		local = local[:,:dimension+1].T
+		a = np.concatenate((local, np.ones((dimension+1, 1))), axis=1)
+		b = (local**2).sum(axis=1)
+		x = np.linalg.solve(a, b)
+		center_local = x[:-1] / 2
+
+		return AffineSubspace(basis, tmp_ah.ToGlobalCoordinates(center_local))
 
 	def E_alpha_u(self, R):
 		return np.hstack([
@@ -333,12 +342,12 @@ if __name__ == "__main__":
 	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
 	print("Should be nonzero:", np.linalg.norm(out[0]))
 
-	# print("\nIcosahedral group")
-	# E = Y()
-	# R1 = np.eye(3)
-	# orbit = E.S.orbit(R1)
-	# out = [E(R) for R in orbit]
-	# print("Dim", out[0].shape)
-	# print("Should be practically zero:", np.max(np.var(out, axis=0)))
-	# print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
-	# print("Should be nonzero:", np.linalg.norm(out[0]))
+	print("\nIcosahedral group")
+	E = Y()
+	R1 = np.eye(3)
+	orbit = E.S.orbit(R1)
+	out = [E(R) for R in orbit]
+	print("Dim", out[0].shape)
+	print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	print("Should be nonzero:", np.linalg.norm(out[0]))
