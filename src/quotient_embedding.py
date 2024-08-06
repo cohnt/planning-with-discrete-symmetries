@@ -125,6 +125,32 @@ class Embedding:
 		# TODO: Maybe adjust per response from paper authors
 		return self.E_alpha_beta_u_S(R) - self.tilde_M_alpha
 
+	def so3_action(self, R, O):
+		return R @ O
+
+	def embedding_action(self, R, v):
+		assert len(v) == np.sum(3 ** np.array(self.alpha))
+		new_v = []
+		i = 0
+		for alpha_i in self.alpha:
+			count = 3 ** alpha_i
+			new_v.append(v[i:i+count])
+			i += count
+
+		for v_i, alpha_i in zip(new_v, self.alpha):
+			np.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), (list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))).flatten()
+
+		return np.hstack([
+			np.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), (list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))).flatten() for v_i, alpha_i in zip(new_v, self.alpha)
+		])
+
+	def affine_project(self, v):
+		return self.affine_hull.ToLocalCoordinates(v).flatten()
+
+	def affine_unproject(self, v):
+		#
+		return self.affine_hull.ToGlobalCoordinates(v).flatten()
+
 	def __call__(self, R, project=True):
 		# val = self.E_alpha_u_S(R)
 		# val = self.E_alpha_beta_u_S(R)
@@ -232,6 +258,8 @@ def Y():
 if __name__ == "__main__":
 	import symmetry
 
+	# print(symmetrized_tensor_identity(4))
+
 	assert np.allclose(beta_C(3), (np.sqrt(5/6), np.sqrt(4/9)))
 	assert np.allclose(beta_C(4), (np.sqrt(1/2), np.sqrt(1/2)))
 	assert np.allclose(beta_C(6), (np.sqrt(1/12), np.sqrt(8/9)))
@@ -239,7 +267,13 @@ if __name__ == "__main__":
 	assert np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	# print(symmetrized_tensor_identity(4))
+	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
+		R, S = special_ortho_group.rvs(3, 2)
+		v1 = E.E_alpha_u_S(E.so3_action(R, S))
+		v2 = E.embedding_action(R, E.E_alpha_u_S(S))
+		print(np.linalg.norm(v1 - v2))
+
+	exit(0)
 
 	print("\nCyclic group with 1 element")
 	E = C1()
