@@ -16,11 +16,12 @@ def symmetrized_tensor_identity(alpha):
 	assert alpha % 2 == 0
 	M_alpha = np.zeros([3] * alpha)
 	order = alpha
+	permutations = itertools.permutations(list(range(order)))
 
 	for i in tqdm(range(M_alpha.size)):
 		idx_str = np.base_repr(i, 3).zfill(order)
 		idx = tuple([int(foo) for foo in idx_str])
-		for permutation in itertools.permutations(list(range(order))):
+		for permutation in permutations:
 			bar = 1
 			for j1, j2 in zip(permutation[::2], permutation[1::2]):
 				bar *= idx[j1] == idx[j2]
