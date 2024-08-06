@@ -88,9 +88,13 @@ class Embedding:
 
 		return AffineSubspace(basis, tmp_ah.ToGlobalCoordinates(center_local))
 
+	def E_alphai_ui(self, R, alpha_i, u_i):
+		#
+		return tensordot([R @ u_i] * alpha_i).flatten()
+
 	def E_alpha_u(self, R):
 		return np.hstack([
-			tensordot([R @ u_i] * alpha_i).flatten()
+			self.E_alphai_ui(R, alpha_i, u_i)
 			for u_i, alpha_i in zip(self.u, self.alpha)
 		]).flatten()
 
@@ -99,9 +103,13 @@ class Embedding:
 			self.E_alpha_u(R @ S_i) for S_i in self.S.matrices
 		], axis=0) / self.S.order()
 
+	def E_alphai_betai_ui(self, R, alpha_i, beta_i, u_i):
+		#
+		return beta_i * tensordot([R @ u_i] * alpha_i).flatten()
+
 	def E_alpha_beta_u(self, R):
 		return np.hstack([
-			beta_i * tensordot([R @ u_i] * alpha_i).flatten()
+			self.E_alphai_betai_ui(R, alpha_i, beta_i, u_i)
 			for beta_i, u_i, alpha_i in zip(self.beta, self.u, self.alpha)
 		])
 
