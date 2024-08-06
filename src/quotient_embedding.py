@@ -241,7 +241,7 @@ if __name__ == "__main__":
 	print("Should be nonzero:", np.linalg.norm(out[0]))
 
 	print("\nDihedral group with 12 elements")
-	alpha = (2,3)
+	alpha = (2,6)
 	u = [np.array([1, 0, 0]), np.array([0, 1, 0])]
 	S = symmetry.DihedralGroup(6)
 	beta = (np.sqrt(5/12), np.sqrt(4)/3)
