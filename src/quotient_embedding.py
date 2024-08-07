@@ -228,11 +228,16 @@ class Embedding:
 
 		return d1 * s1 + d2 * s2 + d3 * s3
 
-	def __call__(self, R, project=True):
-		# val = self.E_alpha_u_S(R)
-		val = self.E_alpha_beta_u_S(R)
-		# val = self.tilde_E_alpha_u_S(R)
-		# val = self.tilde_E_alpha_beta_u_S(R)
+	def __call__(self, R, isometric=True, centered=False, project=True):
+		if not isometric and not centered:
+			val = self.E_alpha_u_S(R)
+		elif isometric and not centered:
+			val = self.E_alpha_beta_u_S(R)
+		elif not isometric and centered:
+			val = self.tilde_E_alpha_u_S(R)
+		else:
+			val = self.tilde_E_alpha_beta_u_S(R)
+
 		if project:
 			return self.ToLocalCoordinates(val).flatten()
 		else:
@@ -346,41 +351,41 @@ if __name__ == "__main__":
 
 	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
 		# Check equivariance
-		# R, S = special_ortho_group.rvs(3, 2)
-		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
-		# v2 = E.embedding_action(R, E.E_alpha_u_S(S))
-		# v1 = E(E.so3_action(R, S), project=False)
-		# v2 = E.embedding_action(R, E(S, project=False))
-		# v1 = E.ToLocalCoordinates(E(E.so3_action(R, S), project=False))
-		# v2 = E.ToLocalCoordinates(E.embedding_action(R, E.ToGlobalCoordinates(E(S))))
-		# print("Should be near zero", np.linalg.norm(v1 - v2))
+		R, S = special_ortho_group.rvs(3, 2)
+		v1 = E.E_alpha_u_S(E.so3_action(R, S))
+		v2 = E.embedding_action(R, E.E_alpha_u_S(S))
+		v1 = E(E.so3_action(R, S), project=False)
+		v2 = E.embedding_action(R, E(S, project=False))
+		v1 = E.ToLocalCoordinates(E(E.so3_action(R, S), project=False))
+		v2 = E.ToLocalCoordinates(E.embedding_action(R, E.ToGlobalCoordinates(E(S))))
+		print("Should be near zero", np.linalg.norm(v1 - v2))
 
 		# Check the J functional
-		# R, S = special_ortho_group.rvs(3, 2)
-		# T1 = E.E_alpha_u_S(R)
-		# T2 = E.E_alpha_beta_u_S(R)
-		# print("Should be positive", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
-		# print("Should be positive", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
-		# S = E.S.orbit(R)[np.random.choice(E.S.order())]
-		# print("Should be zero", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
-		# print("Should be zero", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
+		R, S = special_ortho_group.rvs(3, 2)
+		T1 = E.E_alpha_u_S(R)
+		T2 = E.E_alpha_beta_u_S(R)
+		print("Should be positive", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
+		print("Should be positive", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
+		S = E.S.orbit(R)[np.random.choice(E.S.order())]
+		print("Should be zero", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
+		print("Should be zero", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
 
 		# Check directional derivative of J functional
-		# R = special_ortho_group.rvs(3)
-		# T1 = E.E_alpha_u_S(R)
-		# T2 = E.E_alpha_beta_u_S(R)
-		# a, b, c = np.random.uniform([-1]*3, [1]*3)
-		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
-		# s1[2,1] = s2[2,0] = s3[1,0] = 1
-		# s1[1,2] = s2[0,2] = s3[0,1] = -1
-		# s = a * s1 + b * s2 + c * s3
-		# print("Should be near zero", E.J_directional_derivative(R, T1, s, isometric=False))
-		# print("Should be near zero", E.J_directional_derivative(R, T2, s, isometric=True))
-		# S = special_ortho_group.rvs(3)
-		# T3 = E.E_alpha_u_S(S)
-		# T4 = E.E_alpha_beta_u_S(S)
-		# print("Should be nonzero", E.J_directional_derivative(R, T3, s, isometric=False))
-		# print("Should be nonzero", E.J_directional_derivative(R, T4, s, isometric=True))
+		R = special_ortho_group.rvs(3)
+		T1 = E.E_alpha_u_S(R)
+		T2 = E.E_alpha_beta_u_S(R)
+		a, b, c = np.random.uniform([-1]*3, [1]*3)
+		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		s1[2,1] = s2[2,0] = s3[1,0] = 1
+		s1[1,2] = s2[0,2] = s3[0,1] = -1
+		s = a * s1 + b * s2 + c * s3
+		print("Should be near zero", E.J_directional_derivative(R, T1, s, isometric=False))
+		print("Should be near zero", E.J_directional_derivative(R, T2, s, isometric=True))
+		S = special_ortho_group.rvs(3)
+		T3 = E.E_alpha_u_S(S)
+		T4 = E.E_alpha_beta_u_S(S)
+		print("Should be nonzero", E.J_directional_derivative(R, T3, s, isometric=False))
+		print("Should be nonzero", E.J_directional_derivative(R, T4, s, isometric=True))
 
 		# Test the gradient of the J functional
 		R = special_ortho_group.rvs(3)
