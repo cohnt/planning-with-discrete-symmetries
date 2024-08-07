@@ -69,7 +69,6 @@ class Embedding:
 		self.tilde_M_alpha = np.hstack([M_alpha_i * beta_i / (alpha_i + 1) for M_alpha_i, beta_i, alpha_i in zip(self.M_alpha, self.beta, self.alpha)])
 
 	def compute_affine_hull(self):
-		np.random.seed(0)
 		tol = 1e-12
 
 		# Generate a number of random SO(3) matrices, pass them through the
@@ -218,6 +217,17 @@ class Embedding:
 				for i, (alpha_i, u_i, T_i) in enumerate(zip(self.alpha, self.u, T))
 			])
 
+	def J_gradient(self, R, T, isometric=False):
+		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		s1[2,1] = s2[2,0] = s3[1,0] = 1
+		s1[1,2] = s2[0,2] = s3[0,1] = -1
+
+		d1 = self.J_directional_derivative(R, T, s1, isometric)
+		d2 = self.J_directional_derivative(R, T, s2, isometric)
+		d3 = self.J_directional_derivative(R, T, s3, isometric)
+
+		return d1 * s1 + d2 * s2 + d3 * s3
+
 	def __call__(self, R, project=True):
 		# val = self.E_alpha_u_S(R)
 		val = self.E_alpha_beta_u_S(R)
@@ -346,14 +356,14 @@ if __name__ == "__main__":
 		# print("Should be near zero", np.linalg.norm(v1 - v2))
 
 		# Check the J functional
-		R, S = special_ortho_group.rvs(3, 2)
-		T1 = E.E_alpha_u_S(R)
-		T2 = E.E_alpha_beta_u_S(R)
-		print("Should be positive", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
-		print("Should be positive", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
-		S = E.S.orbit(R)[np.random.choice(E.S.order())]
-		print("Should be zero", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
-		print("Should be zero", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
+		# R, S = special_ortho_group.rvs(3, 2)
+		# T1 = E.E_alpha_u_S(R)
+		# T2 = E.E_alpha_beta_u_S(R)
+		# print("Should be positive", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
+		# print("Should be positive", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
+		# S = E.S.orbit(R)[np.random.choice(E.S.order())]
+		# print("Should be zero", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
+		# print("Should be zero", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
 
 		# Check directional derivative of J functional
 		# R = special_ortho_group.rvs(3)
@@ -371,6 +381,30 @@ if __name__ == "__main__":
 		# T4 = E.E_alpha_beta_u_S(S)
 		# print("Should be nonzero", E.J_directional_derivative(R, T3, s, isometric=False))
 		# print("Should be nonzero", E.J_directional_derivative(R, T4, s, isometric=True))
+
+		# Test the gradient of the J functional
+		R = special_ortho_group.rvs(3)
+		a, b, c = np.random.uniform([-0.1]*3, [0.1]*3)
+		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		s1[2,1] = s2[2,0] = s3[1,0] = 1
+		s1[1,2] = s2[0,2] = s3[0,1] = -1
+		s = a * s1 + b * s2 + c * s3
+
+		U, _, VH = np.linalg.svd(R + s)
+		S = U @ VH
+		# print("Should be positive", E.J_functional(R, E.E_alpha_u_S(R)) - E.J_functional(R, E.E_alpha_u_S(S)))
+
+		grad = E.J_gradient(R, E.E_alpha_u_S(S))
+		S_new = S - (grad @ S * 0.1)
+		U, _, VH = np.linalg.svd(S_new)
+		S_new = U @ VH
+		print("Should be positive", E.J_functional(R, E.E_alpha_u_S(S_new)) - E.J_functional(R, E.E_alpha_u_S(S)))
+
+		grad_isom = E.J_gradient(R, E.E_alpha_beta_u_S(S), isometric=True)
+		S_new = S - (grad_isom @ S * 0.1)
+		U, _, VH = np.linalg.svd(S_new)
+		S_new = U @ VH
+		print("Should be positive", E.J_functional(R, E.E_alpha_beta_u_S(S_new), isometric=True) - E.J_functional(R, E.E_alpha_beta_u_S(S), isometric=True))
 
 	exit(0)
 
