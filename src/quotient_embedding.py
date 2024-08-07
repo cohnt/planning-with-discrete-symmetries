@@ -44,9 +44,9 @@ class Embedding:
 			assert len(u_i) == 3
 		assert len(self.beta) == self.n
 
-		self.M_alpha = self.compute_M_alpha()
-		self.scaled_M_alpha = np.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
-		self.tilde_M_alpha = np.hstack([M_alpha_i * beta_i / (alpha_i + 1) for M_alpha_i, beta_i, alpha_i in zip(self.M_alpha, self.beta, self.alpha)])
+		self.M_alpha = None
+		self.scaled_M_alpha = None
+		self.tilde_M_alpha = None
 
 		self.dimension_upper_bound = dimension_upper_bound
 
@@ -55,13 +55,18 @@ class Embedding:
 		# print("Affine hull condtion number", np.linalg.cond(self.affine_hull.basis()))
 
 	def compute_M_alpha(self):
-		M_alpha = []
+		if self.M_alpha is not None:
+			return
+		
+		self.M_alpha = []
 		for alpha_i in self.alpha:
 			if alpha_i % 2 == 0:
-				M_alpha.append(symmetrized_tensor_identity(alpha_i).flatten())
+				self.M_alpha.append(symmetrized_tensor_identity(alpha_i).flatten())
 			else:
-				M_alpha.append(np.zeros(3 ** alpha_i))
-		return M_alpha
+				self.M_alpha.append(np.zeros(3 ** alpha_i))
+
+		self.scaled_M_alpha = np.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
+		self.tilde_M_alpha = np.hstack([M_alpha_i * beta_i / (alpha_i + 1) for M_alpha_i, beta_i, alpha_i in zip(self.M_alpha, self.beta, self.alpha)])
 
 	def compute_affine_hull(self):
 		np.random.seed(0)
@@ -119,9 +124,11 @@ class Embedding:
 		], axis=0) / self.S.order()
 
 	def tilde_E_alpha_u_S(self, R):
+		self.compute_M_alpha()
 		return self.E_alpha_u_S(R) - self.scaled_M_alpha
 
 	def tilde_E_alpha_beta_u_S(self, R):
+		self.compute_M_alpha()
 		# TODO: Maybe adjust per response from paper authors
 		return self.E_alpha_beta_u_S(R) - self.tilde_M_alpha
 
