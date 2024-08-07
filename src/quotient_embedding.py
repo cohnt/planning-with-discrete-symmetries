@@ -147,20 +147,26 @@ class Embedding:
 			for v_i, alpha_i, index in zip(new_v, self.alpha, indices)
 		])
 
-	def affine_project(self, v):
+	def ToLocalCoordinates(self, v):
+		#
 		return self.affine_hull.ToLocalCoordinates(v).flatten()
 
-	def affine_unproject(self, v):
+	def ToGlobalCoordinates(self, v):
 		#
 		return self.affine_hull.ToGlobalCoordinates(v).flatten()
 
+	# def J_functional(self, R, T):
+	# 	return np.sum([
+	# 		np.inner()
+	# 	])
+
 	def __call__(self, R, project=True):
 		# val = self.E_alpha_u_S(R)
-		# val = self.E_alpha_beta_u_S(R)
+		val = self.E_alpha_beta_u_S(R)
 		# val = self.tilde_E_alpha_u_S(R)
-		val = self.tilde_E_alpha_beta_u_S(R)
+		# val = self.tilde_E_alpha_beta_u_S(R)
 		if project:
-			return self.affine_hull.ToLocalCoordinates(val).flatten()
+			return self.ToLocalCoordinates(val).flatten()
 		else:
 			return val
 
@@ -272,8 +278,12 @@ if __name__ == "__main__":
 
 	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
 		R, S = special_ortho_group.rvs(3, 2)
-		v1 = E.E_alpha_u_S(E.so3_action(R, S))
-		v2 = E.embedding_action(R, E.E_alpha_u_S(S))
+		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
+		# v2 = E.embedding_action(R, E.E_alpha_u_S(S))
+		# v1 = E(E.so3_action(R, S), project=False)
+		# v2 = E.embedding_action(R, E(S, project=False))
+		v1 = E.ToLocalCoordinates(E(E.so3_action(R, S), project=False))
+		v2 = E.ToLocalCoordinates(E.embedding_action(R, E.ToGlobalCoordinates(E(S))))
 		print(np.linalg.norm(v1 - v2))
 
 	exit(0)
