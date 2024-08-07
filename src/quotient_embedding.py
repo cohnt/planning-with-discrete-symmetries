@@ -137,11 +137,14 @@ class Embedding:
 			new_v.append(v[i:i+count])
 			i += count
 
-		for v_i, alpha_i in zip(new_v, self.alpha):
-			np.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), (list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))).flatten()
+		indices = [
+			(list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))
+			for alpha_i in self.alpha
+		]
 
 		return np.hstack([
-			np.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), (list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))).flatten() for v_i, alpha_i in zip(new_v, self.alpha)
+			np.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), index).flatten()
+			for v_i, alpha_i, index in zip(new_v, self.alpha, indices)
 		])
 
 	def affine_project(self, v):
