@@ -135,7 +135,7 @@ class Embedding:
 	def so3_action(self, R, O):
 		return R @ O
 
-	def embedding_action(self, R, v):
+	def embedding_flat_to_tensor(self, v):
 		assert len(v) == np.sum(3 ** np.array(self.alpha))
 		new_v = []
 		i = 0
@@ -143,6 +143,18 @@ class Embedding:
 			count = 3 ** alpha_i
 			new_v.append(v[i:i+count])
 			i += count
+		return new_v
+
+	def embedding_action_i(self, R, v, i):
+		alpha_i = self.alpha[i]
+		assert len(v) == 3 ** alpha_i
+
+		index = (list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))
+
+		return np.tensordot(tensordot([R] * alpha_i), v.reshape(tuple([3] * alpha_i)), index).flatten()
+
+	def embedding_action(self, R, v):
+		v = self.embedding_flat_to_tensor(v)
 
 		indices = [
 			(list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))
@@ -151,7 +163,7 @@ class Embedding:
 
 		return np.hstack([
 			np.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), index).flatten()
-			for v_i, alpha_i, index in zip(new_v, self.alpha, indices)
+			for v_i, alpha_i, index in zip(v, self.alpha, indices)
 		])
 
 	def ToLocalCoordinates(self, v):
@@ -162,10 +174,49 @@ class Embedding:
 		#
 		return self.affine_hull.ToGlobalCoordinates(v).flatten()
 
-	# def J_functional(self, R, T):
-	# 	return np.sum([
-	# 		np.inner()
-	# 	])
+	def J_functional(self, R, T, isometric=False):
+		T = self.embedding_flat_to_tensor(T)
+
+		if isometric:
+			return np.sum([
+				np.inner(self.E_alphai_betai_ui(R, alpha_i, beta_i, u_i), T_i)
+				for alpha_i, beta_i, u_i, T_i in zip(self.alpha, self.beta, self.u, T)
+			])
+		else:
+			return np.sum([
+				np.inner(self.E_alphai_ui(R, alpha_i, u_i), T_i)
+				for alpha_i, u_i, T_i in zip(self.alpha, self.u, T)
+			])
+
+	def J_directional_derivative(self, R, T, s, isometric=False):
+		assert np.linalg.norm(s + s.T) < 1e-12
+		
+		T = self.embedding_flat_to_tensor(T)
+
+		if isometric:
+			return np.sum([
+				alpha_i * np.inner(
+					np.tensordot(s, (
+							self.embedding_action_i(R, self.E_alphai_betai_ui(np.eye(3), alpha_i, beta_i, u_i), i)
+						).reshape([3] * alpha_i),
+						1
+					).flatten(),
+					T_i
+				)
+				for i, (alpha_i, beta_i, u_i, T_i) in enumerate(zip(self.alpha, self.beta, self.u, T))
+			])
+		else:
+			return np.sum([
+				alpha_i * np.inner(
+					np.tensordot(s, (
+							self.embedding_action_i(R, self.E_alphai_ui(np.eye(3), alpha_i, u_i), i)
+						).reshape([3] * alpha_i),
+						1
+					).flatten(),
+					T_i
+				)
+				for i, (alpha_i, u_i, T_i) in enumerate(zip(self.alpha, self.u, T))
+			])
 
 	def __call__(self, R, project=True):
 		# val = self.E_alpha_u_S(R)
@@ -284,14 +335,32 @@ if __name__ == "__main__":
 	assert np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
 	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-		R, S = special_ortho_group.rvs(3, 2)
+		# Check equivariance
+		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
 		# v2 = E.embedding_action(R, E.E_alpha_u_S(S))
 		# v1 = E(E.so3_action(R, S), project=False)
 		# v2 = E.embedding_action(R, E(S, project=False))
-		v1 = E.ToLocalCoordinates(E(E.so3_action(R, S), project=False))
-		v2 = E.ToLocalCoordinates(E.embedding_action(R, E.ToGlobalCoordinates(E(S))))
-		print(np.linalg.norm(v1 - v2))
+		# v1 = E.ToLocalCoordinates(E(E.so3_action(R, S), project=False))
+		# v2 = E.ToLocalCoordinates(E.embedding_action(R, E.ToGlobalCoordinates(E(S))))
+		# print("Should be near zero", np.linalg.norm(v1 - v2))
+
+		# Check directional derivative of J functional
+		R = special_ortho_group.rvs(3)
+		T1 = E.E_alpha_u_S(R)
+		T2 = E.E_alpha_beta_u_S(R)
+		a, b, c = np.random.uniform([-1]*3, [1]*3)
+		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		s1[2,1] = s2[2,0] = s3[1,0] = 1
+		s1[1,2] = s2[0,2] = s3[0,1] = -1
+		s = a * s1 + b * s2 + c * s3
+		print("Should be near zero", E.J_directional_derivative(R, T1, s, isometric=False))
+		print("Should be near zero", E.J_directional_derivative(R, T2, s, isometric=True))
+		S = special_ortho_group.rvs(3)
+		T3 = E.E_alpha_u_S(S)
+		T4 = E.E_alpha_beta_u_S(S)
+		print("Should be nonzero", E.J_directional_derivative(R, T3, s, isometric=False))
+		print("Should be nonzero", E.J_directional_derivative(R, T4, s, isometric=True))
 
 	exit(0)
 
