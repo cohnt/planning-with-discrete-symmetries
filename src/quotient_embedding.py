@@ -1,6 +1,9 @@
-import numpy as np
+import numpy as true_np
+import jax.numpy as np
 import functools
 import itertools
+import time
+from tqdm import tqdm
 
 from scipy.stats import special_ortho_group
 from scipy.special import binom
@@ -41,6 +44,7 @@ class Embedding:
 		for alpha_i in self.alpha:
 			assert isinstance(alpha_i, int)
 		for u_i in self.u:
+			assert isinstance(u_i, np.ndarray)
 			assert len(u_i) == 3
 		assert len(self.beta) == self.n
 
@@ -51,7 +55,7 @@ class Embedding:
 		self.dimension_upper_bound = dimension_upper_bound
 
 		self.affine_hull = self.compute_affine_hull()
-		print("Affine hull dimension", self.affine_hull.AffineDimension())
+		# print("Affine hull dimension", self.affine_hull.AffineDimension())
 		# print("Affine hull condtion number", np.linalg.cond(self.affine_hull.basis()))
 
 	def compute_M_alpha(self):
@@ -103,9 +107,9 @@ class Embedding:
 		]).flatten()
 
 	def E_alpha_u_S(self, R):
-		return np.sum([
+		return np.sum(np.array([
 			self.E_alpha_u(R @ S_i) for S_i in self.S.matrices
-		], axis=0) / self.S.order()
+		]), axis=0) / self.S.order()
 
 	def E_alphai_betai_ui(self, R, alpha_i, beta_i, u_i):
 		#
@@ -118,9 +122,9 @@ class Embedding:
 		])
 
 	def E_alpha_beta_u_S(self, R):
-		return np.sum([
+		return np.sum(np.array([
 			self.E_alpha_beta_u(R @ S_i) for S_i in self.S.matrices
-		], axis=0) / self.S.order()
+		]), axis=0) / self.S.order()
 
 	def tilde_E_alpha_u_S(self, R):
 		self.compute_M_alpha()
@@ -177,23 +181,24 @@ class Embedding:
 		T = self.embedding_flat_to_tensor(T)
 
 		if isometric:
-			return np.sum([
+			return np.sum(np.array([
 				np.inner(self.E_alphai_betai_ui(R, alpha_i, beta_i, u_i), T_i)
 				for alpha_i, beta_i, u_i, T_i in zip(self.alpha, self.beta, self.u, T)
-			])
+			]))
 		else:
-			return np.sum([
+			return np.sum(np.array([
 				np.inner(self.E_alphai_ui(R, alpha_i, u_i), T_i)
 				for alpha_i, u_i, T_i in zip(self.alpha, self.u, T)
-			])
+			]))
 
 	def J_directional_derivative(self, R, T, s, isometric=False):
+		# Directional derivative of J at R in direction sR
 		assert np.linalg.norm(s + s.T) < 1e-12
 		
 		T = self.embedding_flat_to_tensor(T)
 
 		if isometric:
-			return np.sum([
+			return np.sum(np.array([
 				alpha_i * np.inner(
 					np.tensordot(s, (
 							self.embedding_action_i(R, self.E_alphai_betai_ui(np.eye(3), alpha_i, beta_i, u_i), i)
@@ -203,9 +208,9 @@ class Embedding:
 					T_i
 				)
 				for i, (alpha_i, beta_i, u_i, T_i) in enumerate(zip(self.alpha, self.beta, self.u, T))
-			])
+			]))
 		else:
-			return np.sum([
+			return np.sum(np.array([
 				alpha_i * np.inner(
 					np.tensordot(s, (
 							self.embedding_action_i(R, self.E_alphai_ui(np.eye(3), alpha_i, u_i), i)
@@ -215,7 +220,7 @@ class Embedding:
 					T_i
 				)
 				for i, (alpha_i, u_i, T_i) in enumerate(zip(self.alpha, self.u, T))
-			])
+			]))
 
 	def J_gradient(self, R, T, isometric=False):
 		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
@@ -226,7 +231,95 @@ class Embedding:
 		d2 = self.J_directional_derivative(R, T, s2, isometric)
 		d3 = self.J_directional_derivative(R, T, s3, isometric)
 
-		return d1 * s1 + d2 * s2 + d3 * s3
+		return (d1 * s1 + d2 * s2 + d3 * s3) @ R
+
+	def project_pymanopt(self, T, isometric=False, R_secret=np.full((3,3), np.inf)):
+		import pymanopt
+		import pymanopt.manifolds
+		import pymanopt.optimizers
+
+		# Rs = special_ortho_group.rvs(3, 2 * self.S.order())
+		# Js = np.array([self.J_functional(R, T, isometric) for R in Rs])
+		# R = Rs[np.argmax(Js)]
+
+		# print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
+
+		# R = R_secret + true_np.random.uniform(-0.01, 0.01, (3,3))
+		# U, _, VH = np.linalg.svd(R)
+		# R = U @ VH
+
+		R = np.eye(3)
+
+		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
+		@pymanopt.function.jax(manifold)
+		def cost(point):
+			return -self.J_functional(point, T, isometric)
+
+		problem = pymanopt.Problem(manifold, cost)
+		optimizer = pymanopt.optimizers.SteepestDescent()
+
+		result = optimizer.run(problem, initial_point=R)
+
+		print(R_secret, self.J_functional(R_secret, T, isometric))
+		print(result.point, self.J_functional(R_secret, T, isometric))
+
+		return result.point
+
+	def project_embedding(self, T, isometric=False, step_size=1e-1, convergence_tol=1e-8, max_iters=int(1e3), R_secret=np.full((3,3), np.inf)):
+		# Rs = special_ortho_group.rvs(3, 100 * self.S.order())
+		# Js = [self.J_functional(R, T, isometric) for R in Rs]
+		# R = Rs[np.argmax(Js)]
+
+		# print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
+
+		# R = R_secret + np.random.uniform(-0.1, 0.1, size=((3,3)))
+		# U, _, VH = np.linalg.svd(R)
+		# R = U @ VH
+
+		# R = special_ortho_group.rvs(3)
+		R = np.eye(3)
+
+		global vals
+
+		losses = []
+
+		for i in tqdm(range(max_iters)):
+		# for i in range(max_iters):
+			J_old = self.J_functional(R, T, isometric)
+
+			dR = self.J_gradient(R, T, isometric)
+			dR /= 0.5
+
+			J_new = -np.inf
+			while J_new - J_old < -convergence_tol:
+				# print(np.linalg.norm(dR))
+				dR *= 0.5
+				U, _, VH = np.linalg.svd(R + (R @ dR) * step_size)
+				R_new = U @ VH
+
+				diff = np.linalg.norm(R_new - R)
+
+				J_new = self.J_functional(R_new, T, isometric)
+
+				# break
+
+			R = R_new
+			
+			vals.append(J_new - J_old)
+			losses.append(J_old)
+
+			# if np.abs(J_new - J_old) < convergence_tol:
+			# 	break
+
+			if diff < convergence_tol:
+				losses.append(J_new)
+				break
+
+		import matplotlib.pyplot as plt
+		plt.plot(losses)
+		plt.show()
+
+		return R
 
 	def __call__(self, R, isometric=True, centered=False, project=True):
 		if not isometric and not centered:
@@ -295,7 +388,7 @@ def C2():
 
 def CN(n):
 	alpha = (1, n)
-	u = [[1, 0, 0], [0, 1, 0]]
+	u = np.array([[1, 0, 0], [0, 1, 0]])
 	S = symmetry.CyclicGroupSO3(n)
 	beta = beta_C(n)
 	return Embedding(alpha, u, S, beta)
@@ -309,7 +402,7 @@ def D2():
 
 def DN(n):
 	alpha = (2,n)
-	u = [[1, 0, 0], [0, 1, 0]]
+	u = np.array([[1, 0, 0], [0, 1, 0]])
 	S = symmetry.DihedralGroup(3)
 	beta = beta_D(n)
 	return Embedding(alpha, u, S, beta)
@@ -324,7 +417,7 @@ def T():
 
 def O():
 	alpha = (4,)
-	u = [[1, 0, 0]]
+	u = [np.array([1, 0, 0])]
 	u[0] = u[0] / np.linalg.norm(u[0])
 	S = symmetry.OctahedralGroup()
 	beta = (3 / (2 * np.sqrt(2)),)
@@ -340,76 +433,101 @@ def Y():
 if __name__ == "__main__":
 	import symmetry
 
+	vals = []
+
 	# print(symmetrized_tensor_identity(4))
 
-	assert np.allclose(beta_C(3), (np.sqrt(5/6), np.sqrt(4/9)))
-	assert np.allclose(beta_C(4), (np.sqrt(1/2), np.sqrt(1/2)))
-	assert np.allclose(beta_C(6), (np.sqrt(1/12), np.sqrt(8/9)))
-	assert np.allclose(beta_D(3), (np.sqrt(5/12), np.sqrt(4/9)))
-	assert np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
-	assert np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
+	assert true_np.allclose(beta_C(3), (np.sqrt(5/6), np.sqrt(4/9)))
+	assert true_np.allclose(beta_C(4), (np.sqrt(1/2), np.sqrt(1/2)))
+	assert true_np.allclose(beta_C(6), (np.sqrt(1/12), np.sqrt(8/9)))
+	assert true_np.allclose(beta_D(3), (np.sqrt(5/12), np.sqrt(4/9)))
+	assert true_np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
+	assert true_np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
 	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-		# Check equivariance
-		R, S = special_ortho_group.rvs(3, 2)
-		v1 = E.E_alpha_u_S(E.so3_action(R, S))
-		v2 = E.embedding_action(R, E.E_alpha_u_S(S))
-		v1 = E(E.so3_action(R, S), project=False)
-		v2 = E.embedding_action(R, E(S, project=False))
-		v1 = E.ToLocalCoordinates(E(E.so3_action(R, S), project=False))
-		v2 = E.ToLocalCoordinates(E.embedding_action(R, E.ToGlobalCoordinates(E(S))))
-		print("Should be near zero", np.linalg.norm(v1 - v2))
+	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
+	# for E in [T()]:
+		# # Check equivariance
+		# R, S = special_ortho_group.rvs(3, 2)
+		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
+		# v2 = E.embedding_action(R, E.E_alpha_u_S(S))
+		# v1 = E(E.so3_action(R, S), project=False)
+		# v2 = E.embedding_action(R, E(S, project=False))
+		# v1 = E.ToLocalCoordinates(E(E.so3_action(R, S), project=False))
+		# v2 = E.ToLocalCoordinates(E.embedding_action(R, E.ToGlobalCoordinates(E(S))))
+		# print("Should be near zero", np.linalg.norm(v1 - v2))
 
-		# Check the J functional
-		R, S = special_ortho_group.rvs(3, 2)
-		T1 = E.E_alpha_u_S(R)
-		T2 = E.E_alpha_beta_u_S(R)
-		print("Should be positive", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
-		print("Should be positive", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
-		S = E.S.orbit(R)[np.random.choice(E.S.order())]
-		print("Should be zero", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
-		print("Should be zero", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
+		# # Check the J functional
+		# R, S = special_ortho_group.rvs(3, 2)
+		# T1 = E.E_alpha_u_S(R)
+		# T2 = E.E_alpha_beta_u_S(R)
+		# print("Should be positive", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
+		# print("Should be positive", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
+		# S = E.S.orbit(R)[np.random.choice(E.S.order())]
+		# print("Should be zero", E.J_functional(R, T1, isometric=False) - E.J_functional(S, T1, isometric=False))
+		# print("Should be zero", E.J_functional(R, T2, isometric=True) - E.J_functional(S, T2, isometric=True))
 
-		# Check directional derivative of J functional
+		# # Check directional derivative of J functional
+		# R = special_ortho_group.rvs(3)
+		# T1 = E.E_alpha_u_S(R)
+		# T2 = E.E_alpha_beta_u_S(R)
+		# a, b, c = np.random.uniform([-1]*3, [1]*3)
+		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		# s1[2,1] = s2[2,0] = s3[1,0] = 1
+		# s1[1,2] = s2[0,2] = s3[0,1] = -1
+		# s = a * s1 + b * s2 + c * s3
+		# print("Should be near zero", E.J_directional_derivative(R, T1, s, isometric=False))
+		# print("Should be near zero", E.J_directional_derivative(R, T2, s, isometric=True))
+		# S = special_ortho_group.rvs(3)
+		# T3 = E.E_alpha_u_S(S)
+		# T4 = E.E_alpha_beta_u_S(S)
+		# print("Should be nonzero", E.J_directional_derivative(R, T3, s, isometric=False))
+		# print("Should be nonzero", E.J_directional_derivative(R, T4, s, isometric=True))
+
+		# # Test the gradient of the J functional
+		# R = special_ortho_group.rvs(3)
+		# a, b, c = np.random.uniform([-0.1]*3, [0.1]*3)
+		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		# s1[2,1] = s2[2,0] = s3[1,0] = 1
+		# s1[1,2] = s2[0,2] = s3[0,1] = -1
+		# s1 = s1 @ R
+		# s2 = s2 @ R
+		# s3 = s3 @ R
+		# s = a * s1 + b * s2 + c * s3
+
+		# U, _, VH = np.linalg.svd(R + s)
+		# S = U @ VH
+		# # print("Should be positive", E.J_functional(R, E.E_alpha_u_S(R)) - E.J_functional(R, E.E_alpha_u_S(S)))
+
+		# grad = E.J_gradient(S, E.E_alpha_u_S(R))
+		# S_new = S - (grad @ S * 0.1)
+		# # U, _, VH = np.linalg.svd(S_new)
+		# # S_new = U @ VH
+		# print("Should be positive", E.J_functional(S_new, E.E_alpha_u_S(R)) - E.J_functional(S, E.E_alpha_u_S(R)))
+
+		# grad_isom = E.J_gradient(S, E.E_alpha_beta_u_S(R), isometric=True)
+		# S_new = S - (grad_isom @ S * 0.01)
+		# # U, _, VH = np.linalg.svd(S_new)
+		# # S_new = U @ VH
+		# print("Should be positive", E.J_functional(S_new, E.E_alpha_beta_u_S(R), isometric=True) - E.J_functional(S, E.E_alpha_beta_u_S(R), isometric=True))
+
+		# Check projection
 		R = special_ortho_group.rvs(3)
-		T1 = E.E_alpha_u_S(R)
-		T2 = E.E_alpha_beta_u_S(R)
-		a, b, c = np.random.uniform([-1]*3, [1]*3)
-		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
-		s1[2,1] = s2[2,0] = s3[1,0] = 1
-		s1[1,2] = s2[0,2] = s3[0,1] = -1
-		s = a * s1 + b * s2 + c * s3
-		print("Should be near zero", E.J_directional_derivative(R, T1, s, isometric=False))
-		print("Should be near zero", E.J_directional_derivative(R, T2, s, isometric=True))
-		S = special_ortho_group.rvs(3)
-		T3 = E.E_alpha_u_S(S)
-		T4 = E.E_alpha_beta_u_S(S)
-		print("Should be nonzero", E.J_directional_derivative(R, T3, s, isometric=False))
-		print("Should be nonzero", E.J_directional_derivative(R, T4, s, isometric=True))
+		T = E(R, isometric=True, centered=False, project=False)
 
-		# Test the gradient of the J functional
-		R = special_ortho_group.rvs(3)
-		a, b, c = np.random.uniform([-0.1]*3, [0.1]*3)
-		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
-		s1[2,1] = s2[2,0] = s3[1,0] = 1
-		s1[1,2] = s2[0,2] = s3[0,1] = -1
-		s = a * s1 + b * s2 + c * s3
+		# print(R)
+		# print(E.project_embedding(T, isometric=False))
+		# print("Should be nearly zero", np.linalg.norm(R - E.project_embedding(T, isometric=False)))
+		# proj = E.project_embedding(T, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
+		# proj = E.project_embedding(T, isometric=False, R_secret=R)
+		proj = E.project_pymanopt(T, isometric=True, R_secret=R)
+		print("Should be true", E.S.equivalent(R, proj))
+		# print(np.min(vals))
+		# success_fail.append(E.S.equivalent(R, proj))
 
-		U, _, VH = np.linalg.svd(R + s)
-		S = U @ VH
-		# print("Should be positive", E.J_functional(R, E.E_alpha_u_S(R)) - E.J_functional(R, E.E_alpha_u_S(S)))
+		# break
 
-		grad = E.J_gradient(R, E.E_alpha_u_S(S))
-		S_new = S - (grad @ S * 0.1)
-		U, _, VH = np.linalg.svd(S_new)
-		S_new = U @ VH
-		print("Should be positive", E.J_functional(R, E.E_alpha_u_S(S_new)) - E.J_functional(R, E.E_alpha_u_S(S)))
-
-		grad_isom = E.J_gradient(R, E.E_alpha_beta_u_S(S), isometric=True)
-		S_new = S - (grad_isom @ S * 0.1)
-		U, _, VH = np.linalg.svd(S_new)
-		S_new = U @ VH
-		print("Should be positive", E.J_functional(R, E.E_alpha_beta_u_S(S_new), isometric=True) - E.J_functional(R, E.E_alpha_beta_u_S(S), isometric=True))
+	# print(np.min(np.array(vals)))
 
 	exit(0)
 
