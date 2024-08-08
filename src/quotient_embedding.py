@@ -1,4 +1,5 @@
 import numpy as true_np
+import jax
 import jax.numpy as np
 import functools
 import itertools
@@ -223,7 +224,7 @@ class Embedding:
 			]))
 
 	def J_gradient(self, R, T, isometric=False):
-		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		s1, s2, s3 = true_np.zeros((3,3)), true_np.zeros((3,3)), true_np.zeros((3,3))
 		s1[2,1] = s2[2,0] = s3[1,0] = 1
 		s1[1,2] = s2[0,2] = s3[0,1] = -1
 
@@ -238,27 +239,61 @@ class Embedding:
 		import pymanopt.manifolds
 		import pymanopt.optimizers
 
-		# Rs = special_ortho_group.rvs(3, 2 * self.S.order())
-		# Js = np.array([self.J_functional(R, T, isometric) for R in Rs])
-		# R = Rs[np.argmax(Js)]
+		Rs = special_ortho_group.rvs(3, 2 * self.S.order())
+		Js = np.array([self.J_functional(R, T, isometric) for R in Rs])
+		R = Rs[np.argmax(Js)]
 
 		# print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
-		# R = R_secret + true_np.random.uniform(-0.01, 0.01, (3,3))
+		# R = R_secret + true_np.random.uniform(-0.1, 0.1, (3,3))
 		# U, _, VH = np.linalg.svd(R)
 		# R = U @ VH
 
-		R = np.eye(3)
+		# R = np.eye(3)
 
 		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
 		@pymanopt.function.jax(manifold)
 		def cost(point):
 			return -self.J_functional(point, T, isometric)
 
-		problem = pymanopt.Problem(manifold, cost)
-		optimizer = pymanopt.optimizers.SteepestDescent()
+		@pymanopt.function.jax(manifold)
+		def grad(point):
+			return -self.J_gradient(point, T, isometric)
+
+		# foo = lambda x, T=T, isometric=isometric : self.J_functional(x, T, isometric)
+
+		# print("R_secret", R_secret)
+		# print("R", R)
+		# print()
+
+		# J_prime = jax.grad(foo)
+		# print(J_prime(R) - J_prime(R).T)
+		# print(self.J_gradient(R, T, isometric))
+		# print()
+
+		# print(R + self.J_gradient(R, T, isometric))
+		# bar = R + self.J_gradient(R, T, isometric)
+		# U, _, VH = np.linalg.svd(bar)
+		# print(U @ VH)
+
+		# exit(0)
+
+		problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
+		# optimizer = pymanopt.optimizers.SteepestDescent()
+		# optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
+
+		ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1e-2)
+		optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls)
+
+		# optimizer = pymanopt.optimizers.nelder_mead.NelderMead(max_cost_evaluations=20000, max_iterations=4000)
+		# R = None
+
+		# optimizer = pymanopt.optimizers.particle_swarm.ParticleSwarm()
+		# R = None
 
 		result = optimizer.run(problem, initial_point=R)
+
+		# print(result)
 
 		print(R_secret, self.J_functional(R_secret, T, isometric))
 		print(result.point, self.J_functional(R_secret, T, isometric))
@@ -446,7 +481,7 @@ if __name__ == "__main__":
 
 	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
 	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-	# for E in [T()]:
+	# for E in [O()]:
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
@@ -512,7 +547,8 @@ if __name__ == "__main__":
 		# print("Should be positive", E.J_functional(S_new, E.E_alpha_beta_u_S(R), isometric=True) - E.J_functional(S, E.E_alpha_beta_u_S(R), isometric=True))
 
 		# Check projection
-		R = special_ortho_group.rvs(3)
+		# R = special_ortho_group.rvs(3)
+		R = np.eye(3)
 		T = E(R, isometric=True, centered=False, project=False)
 
 		# print(R)
@@ -521,7 +557,7 @@ if __name__ == "__main__":
 		# proj = E.project_embedding(T, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
 		# proj = E.project_embedding(T, isometric=False, R_secret=R)
 		proj = E.project_pymanopt(T, isometric=True, R_secret=R)
-		print("Should be true", E.S.equivalent(R, proj))
+		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		# print(np.min(vals))
 		# success_fail.append(E.S.equivalent(R, proj))
 

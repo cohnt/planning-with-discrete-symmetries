@@ -25,13 +25,18 @@ class SymmetryGroupBase():
 	def equivalent(self, R1, R2, tol=1e-4):
 		# Return whether R1 and R2 are equivalent modulo the symmetry
 		best = np.inf
+		best_candidate = None
 		candidates = self.orbit(R2)
 		for S in candidates:
-			foo = np.linalg.norm(R1 - S)
-			best = min(best, foo)
+			foo = np.linalg.norm(R1 - S, ord=np.inf)
+			# print(foo)
+			if foo < best:
+				best = foo
+				best_candidate = S
 			if foo < tol:
 				return True
-		# print("Best was", best)
+		print("Best was", best, best_candidate)
+		# print("Best was", best, "\t", end="")
 		return False
 
 class SymmetryGroupSO3Base(SymmetryGroupBase):
