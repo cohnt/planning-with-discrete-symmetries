@@ -22,6 +22,18 @@ class SymmetryGroupBase():
 	def order(self):
 		return len(self.matrices)
 
+	def equivalent(self, R1, R2, tol=1e-4):
+		# Return whether R1 and R2 are equivalent modulo the symmetry
+		best = np.inf
+		candidates = self.orbit(R2)
+		for S in candidates:
+			foo = np.linalg.norm(R1 - S)
+			best = min(best, foo)
+			if foo < tol:
+				return True
+		# print("Best was", best)
+		return False
+
 class SymmetryGroupSO3Base(SymmetryGroupBase):
 	def __init__(self):
 		super().__init__()
