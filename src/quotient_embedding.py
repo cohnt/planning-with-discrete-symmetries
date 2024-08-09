@@ -193,12 +193,12 @@ class Embedding:
 
 		if isometric:
 			return np.sum(np.array([
-				np.inner(self.E_alphai_betai_ui(R, alpha_i, beta_i, u_i), T_i)
+				np.inner(self.E_alphai_betai_ui_S(R, alpha_i, beta_i, u_i), T_i)
 				for alpha_i, beta_i, u_i, T_i in zip(self.alpha, self.beta, self.u, T)
 			])) / self.S.order()
 		else:
 			return np.sum(np.array([
-				np.inner(self.E_alphai_ui(R, alpha_i, u_i), T_i)
+				np.inner(self.E_alphai_ui_S(R, alpha_i, u_i), T_i)
 				for alpha_i, u_i, T_i in zip(self.alpha, self.u, T)
 			]))
 
@@ -261,9 +261,9 @@ class Embedding:
 		import pymanopt.manifolds
 		import pymanopt.optimizers
 
-		Rs = special_ortho_group.rvs(3, 2 * self.S.order())
-		Js = np.array([self.J_functional(R, T, isometric) for R in Rs])
-		R = Rs[np.argmax(Js)]
+		# Rs = special_ortho_group.rvs(3, 2 * self.S.order())
+		# Js = np.array([self.J_functional(R, T, isometric) for R in Rs])
+		# R = Rs[np.argmax(Js)]
 
 		# print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
@@ -280,15 +280,12 @@ class Embedding:
 		# U, _, VH = np.linalg.svd(R)
 		# R = U @ VH
 
-		# R = np.eye(3)
+		R = np.eye(3)
 
 		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
 		@pymanopt.function.jax(manifold)
 		def cost(point):
-			return np.sum(np.array([
-				-self.J_functional(point @ S, T, isometric)
-				for S in self.S.matrices
-			]))
+			return -self.J_functional(point, T, isometric)
 
 		@pymanopt.function.jax(manifold)
 		def grad(point):
@@ -323,11 +320,11 @@ class Embedding:
 		# problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
 		# problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
 		# optimizer = pymanopt.optimizers.SteepestDescent()
-		# optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
+		optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
 
-		verbosity = 0
-		ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
-		optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
+		# verbosity = 2
+		# ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
+		# optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
 
 		# optimizer = pymanopt.optimizers.nelder_mead.NelderMead(max_cost_evaluations=20000, max_iterations=4000)
 		# R = None
@@ -527,10 +524,11 @@ if __name__ == "__main__":
 	assert true_np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert true_np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	# for E in [C1(), C2(), CN(3), CN(6), D2(), DN(3), DN(6), T(), O(), Y()]:
-	# 	print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
+	for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O()]:
+	# for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O(), Y()]:
+		print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
 	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-	for E in [Y()]:
+	# for E in [Y()]:
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
