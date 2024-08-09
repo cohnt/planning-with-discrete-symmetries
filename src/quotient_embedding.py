@@ -486,7 +486,7 @@ def D2():
 def DN(n):
 	alpha = (2,n)
 	u = np.array([[1, 0, 0], [0, 1, 0]])
-	S = symmetry.DihedralGroup(3)
+	S = symmetry.DihedralGroup(n)
 	beta = beta_D(n)
 	return Embedding(alpha, u, S, beta)
 
@@ -527,7 +527,7 @@ if __name__ == "__main__":
 	assert true_np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert true_np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O(), Y()]:
+	for E in [C1(), C2(), CN(3), CN(6), D2(), DN(3), DN(6), T(), O(), Y()]:
 		print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
 	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
 	# for E in [T()]:
