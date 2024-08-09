@@ -82,7 +82,7 @@ class Embedding:
 		ys = np.array([self(x, project=False) for x in xs]).T
 
 		# Calculate basis with SVD. Center the data first.
-		U, S, V = np.linalg.svd(ys - ys[:,[0]])
+		U, S, V = true_np.linalg.svd(ys - ys[:,[0]])
 		dimension = np.count_nonzero(np.abs(S) > tol)
 		basis = U[:,0:dimension]
 
@@ -527,10 +527,10 @@ if __name__ == "__main__":
 	assert true_np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert true_np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	for E in [C1(), C2(), CN(3), CN(6), D2(), DN(3), DN(6), T(), O(), Y()]:
-		print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
+	# for E in [C1(), C2(), CN(3), CN(6), D2(), DN(3), DN(6), T(), O(), Y()]:
+	# 	print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
 	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-	# for E in [T()]:
+	for E in [Y()]:
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
