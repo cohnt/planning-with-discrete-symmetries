@@ -101,6 +101,11 @@ class Embedding:
 		#
 		return tensordot([R @ u_i] * alpha_i).flatten()
 
+	def E_alphai_ui_S(self, R, alpha_i, u_i):
+		return np.sum(np.array([
+			self.E_alphai_ui(R @ S_j, alpha_i, u_i) for S_j in self.S.matrices
+		]), axis=0) / self.S.order()
+
 	def E_alpha_u(self, R):
 		return np.hstack([
 			self.E_alphai_ui(R, alpha_i, u_i)
@@ -115,6 +120,11 @@ class Embedding:
 	def E_alphai_betai_ui(self, R, alpha_i, beta_i, u_i):
 		#
 		return beta_i * tensordot([R @ u_i] * alpha_i).flatten()
+
+	def E_alphai_betai_ui_S(self, R, alpha_i, beta_i, u_i):
+		return np.sum(np.array([
+			self.E_alphai_betai_ui(R @ S_j, alpha_i, beta_i, u_i) for S_j in self.S.matrices
+		]), axis=0) / self.S.order()
 
 	def E_alpha_beta_u(self, R):
 		return np.hstack([
@@ -183,12 +193,12 @@ class Embedding:
 
 		if isometric:
 			return np.sum(np.array([
-				np.inner(self.E_alphai_betai_ui(R, alpha_i, beta_i, u_i), T_i)
+				np.inner(self.E_alphai_betai_ui_S(R, alpha_i, beta_i, u_i), T_i)
 				for alpha_i, beta_i, u_i, T_i in zip(self.alpha, self.beta, self.u, T)
-			]))
+			])) / self.S.order()
 		else:
 			return np.sum(np.array([
-				np.inner(self.E_alphai_ui(R, alpha_i, u_i), T_i)
+				np.inner(self.E_alphai_ui_S(R, alpha_i, u_i), T_i)
 				for alpha_i, u_i, T_i in zip(self.alpha, self.u, T)
 			]))
 
@@ -224,6 +234,18 @@ class Embedding:
 			]))
 
 	def J_gradient(self, R, T, isometric=False):
+		# s1, s2, s3 = true_np.zeros((3,3)), true_np.zeros((3,3)), true_np.zeros((3,3))
+		# s1[2,1] = s2[2,0] = s3[1,0] = 1
+		# s1[1,2] = s2[0,2] = s3[0,1] = -1
+
+		# d1 = self.J_directional_derivative(R, T, s1, isometric)
+		# d2 = self.J_directional_derivative(R, T, s2, isometric)
+		# d3 = self.J_directional_derivative(R, T, s3, isometric)
+
+		# return (d1 * s1 + d2 * s2 + d3 * s3) @ R
+		return self.J_gradient_local(R, T, isometric) @ R
+
+	def J_gradient_local(self, R, T, isometric=False):
 		s1, s2, s3 = true_np.zeros((3,3)), true_np.zeros((3,3)), true_np.zeros((3,3))
 		s1[2,1] = s2[2,0] = s3[1,0] = 1
 		s1[1,2] = s2[0,2] = s3[0,1] = -1
@@ -232,7 +254,7 @@ class Embedding:
 		d2 = self.J_directional_derivative(R, T, s2, isometric)
 		d3 = self.J_directional_derivative(R, T, s3, isometric)
 
-		return (d1 * s1 + d2 * s2 + d3 * s3) @ R
+		return d1 * s1 + d2 * s2 + d3 * s3
 
 	def project_pymanopt(self, T, isometric=False, R_secret=np.full((3,3), np.inf)):
 		import pymanopt
@@ -249,6 +271,15 @@ class Embedding:
 		# U, _, VH = np.linalg.svd(R)
 		# R = U @ VH
 
+		# R = np.array([
+		# 	[1, 0, 0],
+		# 	[0, 0, -1],
+		# 	[0, 1, 0]
+		# ], dtype=float)
+		# R = R + true_np.random.uniform(-0.1, 0.1, (3,3))
+		# U, _, VH = np.linalg.svd(R)
+		# R = U @ VH
+
 		# R = np.eye(3)
 
 		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
@@ -258,7 +289,13 @@ class Embedding:
 
 		@pymanopt.function.jax(manifold)
 		def grad(point):
+			# print(-self.J_gradient(point, T, isometric))
 			return -self.J_gradient(point, T, isometric)
+
+		@pymanopt.function.jax(manifold)
+		def rgrad(point):
+			# print(point @ (-self.J_gradient_local(point, T, isometric)))
+			return point @ (-self.J_gradient_local(point, T, isometric))
 
 		# foo = lambda x, T=T, isometric=isometric : self.J_functional(x, T, isometric)
 
@@ -268,22 +305,26 @@ class Embedding:
 
 		# J_prime = jax.grad(foo)
 		# print(J_prime(R) - J_prime(R).T)
-		# print(self.J_gradient(R, T, isometric))
+		# print(rgrad(R))
 		# print()
 
-		# print(R + self.J_gradient(R, T, isometric))
+		# # print(R + self.J_gradient(R, T, isometric))
 		# bar = R + self.J_gradient(R, T, isometric)
 		# U, _, VH = np.linalg.svd(bar)
+		# print(R)
 		# print(U @ VH)
 
 		# exit(0)
 
-		problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
+		problem = pymanopt.Problem(manifold, cost)
+		# problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
+		# problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
 		# optimizer = pymanopt.optimizers.SteepestDescent()
 		# optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
 
-		ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1e-2)
-		optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls)
+		verbosity = 2
+		ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
+		optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
 
 		# optimizer = pymanopt.optimizers.nelder_mead.NelderMead(max_cost_evaluations=20000, max_iterations=4000)
 		# R = None
@@ -293,10 +334,14 @@ class Embedding:
 
 		result = optimizer.run(problem, initial_point=R)
 
-		# print(result)
+		print(result)
 
 		print(R_secret, self.J_functional(R_secret, T, isometric))
-		print(result.point, self.J_functional(R_secret, T, isometric))
+		print(result.point, self.J_functional(result.point, T, isometric))
+		print(np.linalg.norm(R_secret - result.point))
+
+		# import pdb
+		# pdb.set_trace()
 
 		return result.point
 
@@ -479,9 +524,10 @@ if __name__ == "__main__":
 	assert true_np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert true_np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
+	# for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
+		# print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
 	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-	# for E in [O()]:
+	for E in [T()]:
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
@@ -521,8 +567,8 @@ if __name__ == "__main__":
 
 		# # Test the gradient of the J functional
 		# R = special_ortho_group.rvs(3)
-		# a, b, c = np.random.uniform([-0.1]*3, [0.1]*3)
-		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+		# a, b, c = true_np.random.uniform([-0.1]*3, [0.1]*3)
+		# s1, s2, s3 = true_np.zeros((3,3)), true_np.zeros((3,3)), true_np.zeros((3,3))
 		# s1[2,1] = s2[2,0] = s3[1,0] = 1
 		# s1[1,2] = s2[0,2] = s3[0,1] = -1
 		# s1 = s1 @ R
@@ -560,8 +606,6 @@ if __name__ == "__main__":
 		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		# print(np.min(vals))
 		# success_fail.append(E.S.equivalent(R, proj))
-
-		# break
 
 	# print(np.min(np.array(vals)))
 
