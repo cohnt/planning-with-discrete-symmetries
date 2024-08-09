@@ -193,12 +193,12 @@ class Embedding:
 
 		if isometric:
 			return np.sum(np.array([
-				np.inner(self.E_alphai_betai_ui_S(R, alpha_i, beta_i, u_i), T_i)
+				np.inner(self.E_alphai_betai_ui(R, alpha_i, beta_i, u_i), T_i)
 				for alpha_i, beta_i, u_i, T_i in zip(self.alpha, self.beta, self.u, T)
 			])) / self.S.order()
 		else:
 			return np.sum(np.array([
-				np.inner(self.E_alphai_ui_S(R, alpha_i, u_i), T_i)
+				np.inner(self.E_alphai_ui(R, alpha_i, u_i), T_i)
 				for alpha_i, u_i, T_i in zip(self.alpha, self.u, T)
 			]))
 
@@ -285,7 +285,10 @@ class Embedding:
 		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
 		@pymanopt.function.jax(manifold)
 		def cost(point):
-			return -self.J_functional(point, T, isometric)
+			return np.sum(np.array([
+				-self.J_functional(point @ S, T, isometric)
+				for S in self.S.matrices
+			]))
 
 		@pymanopt.function.jax(manifold)
 		def grad(point):
@@ -322,7 +325,7 @@ class Embedding:
 		# optimizer = pymanopt.optimizers.SteepestDescent()
 		# optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
 
-		verbosity = 2
+		verbosity = 0
 		ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
 		optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
 
@@ -334,11 +337,11 @@ class Embedding:
 
 		result = optimizer.run(problem, initial_point=R)
 
-		print(result)
+		# print(result)
 
-		print(R_secret, self.J_functional(R_secret, T, isometric))
-		print(result.point, self.J_functional(result.point, T, isometric))
-		print(np.linalg.norm(R_secret - result.point))
+		# print(R_secret, self.J_functional(R_secret, T, isometric))
+		# print(result.point, self.J_functional(result.point, T, isometric))
+		# print(np.linalg.norm(R_secret - result.point))
 
 		# import pdb
 		# pdb.set_trace()
@@ -505,7 +508,7 @@ def O():
 
 def Y():
 	alpha = (10,)
-	u = [[1, 0, 0]]
+	u = np.array([[1, 0, 0]])
 	S = symmetry.IcosahedralGroup()
 	beta = (75 / (8 * np.sqrt(95)),)
 	return Embedding(alpha, u, S, beta)
@@ -524,10 +527,10 @@ if __name__ == "__main__":
 	assert true_np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert true_np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	# for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-		# print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
+	for E in [C1(), C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O(), Y()]:
+		print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
 	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-	for E in [T()]:
+	# for E in [T()]:
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
@@ -593,8 +596,8 @@ if __name__ == "__main__":
 		# print("Should be positive", E.J_functional(S_new, E.E_alpha_beta_u_S(R), isometric=True) - E.J_functional(S, E.E_alpha_beta_u_S(R), isometric=True))
 
 		# Check projection
-		# R = special_ortho_group.rvs(3)
-		R = np.eye(3)
+		R = special_ortho_group.rvs(3)
+		# R = np.eye(3)
 		T = E(R, isometric=True, centered=False, project=False)
 
 		# print(R)
