@@ -320,11 +320,11 @@ class Embedding:
 		# problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
 		# problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
 		# optimizer = pymanopt.optimizers.SteepestDescent()
-		optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
+		# optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
 
-		# verbosity = 2
-		# ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
-		# optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
+		verbosity = 2
+		ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
+		optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
 
 		# optimizer = pymanopt.optimizers.nelder_mead.NelderMead(max_cost_evaluations=20000, max_iterations=4000)
 		# R = None
@@ -336,9 +336,9 @@ class Embedding:
 
 		# print(result)
 
-		# print(R_secret, self.J_functional(R_secret, T, isometric))
-		# print(result.point, self.J_functional(result.point, T, isometric))
-		# print(jnp.linalg.norm(R_secret - result.point))
+		print(R_secret, self.J_functional(R_secret, T, isometric))
+		print(result.point, self.J_functional(result.point, T, isometric))
+		print(jnp.linalg.norm(R_secret - result.point))
 
 		# import pdb
 		# pdb.set_trace()
@@ -524,11 +524,12 @@ if __name__ == "__main__":
 	assert np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O()]:
+	# for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O()]:
 	# for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O(), Y()]:
-		print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
+	# 	print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
 	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
 	# for E in [Y()]:
+	for E in [CN(6)]:
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
@@ -594,8 +595,13 @@ if __name__ == "__main__":
 		# print("Should be positive", E.J_functional(S_new, E.E_alpha_beta_u_S(R), isometric=True) - E.J_functional(S, E.E_alpha_beta_u_S(R), isometric=True))
 
 		# Check projection
-		R = special_ortho_group.rvs(3)
+		# R = special_ortho_group.rvs(3)
 		# R = np.eye(3)
+		R = np.array([
+			[-0.85813014, 0.36723283, 0.35882128],
+ 			[0.20750331, -0.39119142, 0.8966112],
+ 			[0.46963288, 0.8438657, 0.25949112]
+ 		])
 		T = E(R, isometric=True, centered=False, project=False)
 
 		# print(R)
