@@ -1,6 +1,6 @@
-import numpy as true_np
+import numpy as np
 import jax
-import jax.numpy as np
+import jax.numpy as jnp
 import functools
 import itertools
 import time
@@ -12,12 +12,12 @@ from scipy.special import binom
 from pydrake.all import VPolytope, AffineSubspace
 
 def tensordot(vecs):
-	return functools.reduce(lambda u, v: np.tensordot(u, v, axes=0), vecs)
+	return functools.reduce(lambda u, v: jnp.tensordot(u, v, axes=0), vecs)
 
 def symmetrized_tensor_identity(alpha):
 	assert isinstance(alpha, int)
 	assert alpha % 2 == 0
-	M_alpha = np.zeros([3] * alpha)
+	M_alpha = jnp.zeros([3] * alpha)
 	order = alpha
 	permutations = itertools.permutations(list(range(order)))
 
@@ -38,14 +38,14 @@ class Embedding:
 		self.alpha = alpha
 		self.u = u
 		self.S = S
-		self.beta = np.ones(self.n) if beta is None else beta
+		self.beta = jnp.ones(self.n) if beta is None else beta
 
 		assert len(self.alpha) == self.n
 		assert len(self.u) == self.n
 		for alpha_i in self.alpha:
 			assert isinstance(alpha_i, int)
 		for u_i in self.u:
-			assert isinstance(u_i, np.ndarray)
+			assert isinstance(u_i, jnp.ndarray)
 			assert len(u_i) == 3
 		assert len(self.beta) == self.n
 
@@ -68,10 +68,10 @@ class Embedding:
 			if alpha_i % 2 == 0:
 				self.M_alpha.append(symmetrized_tensor_identity(alpha_i).flatten())
 			else:
-				self.M_alpha.append(np.zeros(3 ** alpha_i))
+				self.M_alpha.append(jnp.zeros(3 ** alpha_i))
 
-		self.scaled_M_alpha = np.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
-		self.tilde_M_alpha = np.hstack([M_alpha_i * beta_i / (alpha_i + 1) for M_alpha_i, beta_i, alpha_i in zip(self.M_alpha, self.beta, self.alpha)])
+		self.scaled_M_alpha = jnp.hstack([M_alpha_i / (alpha_i + 1) for M_alpha_i, alpha_i in zip(self.M_alpha, self.alpha)])
+		self.tilde_M_alpha = jnp.hstack([M_alpha_i * beta_i / (alpha_i + 1) for M_alpha_i, beta_i, alpha_i in zip(self.M_alpha, self.beta, self.alpha)])
 
 	def compute_affine_hull(self):
 		tol = 1e-12
@@ -82,7 +82,7 @@ class Embedding:
 		ys = np.array([self(x, project=False) for x in xs]).T
 
 		# Calculate basis with SVD. Center the data first.
-		U, S, V = true_np.linalg.svd(ys - ys[:,[0]])
+		U, S, V = np.linalg.svd(ys - ys[:,[0]])
 		dimension = np.count_nonzero(np.abs(S) > tol)
 		basis = U[:,0:dimension]
 
@@ -102,18 +102,18 @@ class Embedding:
 		return tensordot([R @ u_i] * alpha_i).flatten()
 
 	def E_alphai_ui_S(self, R, alpha_i, u_i):
-		return np.sum(np.array([
+		return jnp.sum(jnp.array([
 			self.E_alphai_ui(R @ S_j, alpha_i, u_i) for S_j in self.S.matrices
 		]), axis=0) / self.S.order()
 
 	def E_alpha_u(self, R):
-		return np.hstack([
+		return jnp.hstack([
 			self.E_alphai_ui(R, alpha_i, u_i)
 			for u_i, alpha_i in zip(self.u, self.alpha)
 		]).flatten()
 
 	def E_alpha_u_S(self, R):
-		return np.sum(np.array([
+		return jnp.sum(jnp.array([
 			self.E_alpha_u(R @ S_i) for S_i in self.S.matrices
 		]), axis=0) / self.S.order()
 
@@ -122,18 +122,18 @@ class Embedding:
 		return beta_i * tensordot([R @ u_i] * alpha_i).flatten()
 
 	def E_alphai_betai_ui_S(self, R, alpha_i, beta_i, u_i):
-		return np.sum(np.array([
+		return jnp.sum(jnp.array([
 			self.E_alphai_betai_ui(R @ S_j, alpha_i, beta_i, u_i) for S_j in self.S.matrices
 		]), axis=0) / self.S.order()
 
 	def E_alpha_beta_u(self, R):
-		return np.hstack([
+		return jnp.hstack([
 			self.E_alphai_betai_ui(R, alpha_i, beta_i, u_i)
 			for beta_i, u_i, alpha_i in zip(self.beta, self.u, self.alpha)
 		])
 
 	def E_alpha_beta_u_S(self, R):
-		return np.sum(np.array([
+		return jnp.sum(jnp.array([
 			self.E_alpha_beta_u(R @ S_i) for S_i in self.S.matrices
 		]), axis=0) / self.S.order()
 
@@ -150,7 +150,7 @@ class Embedding:
 		return R @ O
 
 	def embedding_flat_to_tensor(self, v):
-		assert len(v) == np.sum(3 ** np.array(self.alpha))
+		assert len(v) == jnp.sum(3 ** jnp.array(self.alpha))
 		new_v = []
 		i = 0
 		for alpha_i in self.alpha:
@@ -165,7 +165,7 @@ class Embedding:
 
 		index = (list(range(1, 2 * alpha_i, 2)), list(range(alpha_i)))
 
-		return np.tensordot(tensordot([R] * alpha_i), v.reshape(tuple([3] * alpha_i)), index).flatten()
+		return jnp.tensordot(tensordot([R] * alpha_i), v.reshape(tuple([3] * alpha_i)), index).flatten()
 
 	def embedding_action(self, R, v):
 		v = self.embedding_flat_to_tensor(v)
@@ -175,8 +175,8 @@ class Embedding:
 			for alpha_i in self.alpha
 		]
 
-		return np.hstack([
-			np.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), index).flatten()
+		return jnp.hstack([
+			jnp.tensordot(tensordot([R] * alpha_i), v_i.reshape(tuple([3] * alpha_i)), index).flatten()
 			for v_i, alpha_i, index in zip(v, self.alpha, indices)
 		])
 
@@ -192,27 +192,27 @@ class Embedding:
 		T = self.embedding_flat_to_tensor(T)
 
 		if isometric:
-			return np.sum(np.array([
-				np.inner(self.E_alphai_betai_ui_S(R, alpha_i, beta_i, u_i), T_i)
+			return jnp.sum(jnp.array([
+				jnp.inner(self.E_alphai_betai_ui_S(R, alpha_i, beta_i, u_i), T_i)
 				for alpha_i, beta_i, u_i, T_i in zip(self.alpha, self.beta, self.u, T)
 			])) / self.S.order()
 		else:
-			return np.sum(np.array([
-				np.inner(self.E_alphai_ui_S(R, alpha_i, u_i), T_i)
+			return jnp.sum(jnp.array([
+				jnp.inner(self.E_alphai_ui_S(R, alpha_i, u_i), T_i)
 				for alpha_i, u_i, T_i in zip(self.alpha, self.u, T)
 			]))
 
 	def J_directional_derivative(self, R, T, s, isometric=False):
 		# Directional derivative of J at R in direction sR
-		assert np.linalg.norm(s + s.T) < 1e-12
+		assert jnp.linalg.norm(s + s.T) < 1e-12
 		
 		T = self.embedding_flat_to_tensor(T)
 
 		if isometric:
-			return np.sum(np.array([
-				alpha_i * np.inner(
-					np.tensordot(s, (
-							self.embedding_action_i(R, self.E_alphai_betai_ui(np.eye(3), alpha_i, beta_i, u_i), i)
+			return jnp.sum(jnp.array([
+				alpha_i * jnp.inner(
+					jnp.tensordot(s, (
+							self.embedding_action_i(R, self.E_alphai_betai_ui(jnp.eye(3), alpha_i, beta_i, u_i), i)
 						).reshape([3] * alpha_i),
 						1
 					).flatten(),
@@ -221,10 +221,10 @@ class Embedding:
 				for i, (alpha_i, beta_i, u_i, T_i) in enumerate(zip(self.alpha, self.beta, self.u, T))
 			]))
 		else:
-			return np.sum(np.array([
-				alpha_i * np.inner(
-					np.tensordot(s, (
-							self.embedding_action_i(R, self.E_alphai_ui(np.eye(3), alpha_i, u_i), i)
+			return jnp.sum(jnp.array([
+				alpha_i * jnp.inner(
+					jnp.tensordot(s, (
+							self.embedding_action_i(R, self.E_alphai_ui(jnp.eye(3), alpha_i, u_i), i)
 						).reshape([3] * alpha_i),
 						1
 					).flatten(),
@@ -234,7 +234,7 @@ class Embedding:
 			]))
 
 	def J_gradient(self, R, T, isometric=False):
-		# s1, s2, s3 = true_np.zeros((3,3)), true_np.zeros((3,3)), true_np.zeros((3,3))
+		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
 		# s1[2,1] = s2[2,0] = s3[1,0] = 1
 		# s1[1,2] = s2[0,2] = s3[0,1] = -1
 
@@ -246,7 +246,7 @@ class Embedding:
 		return self.J_gradient_local(R, T, isometric) @ R
 
 	def J_gradient_local(self, R, T, isometric=False):
-		s1, s2, s3 = true_np.zeros((3,3)), true_np.zeros((3,3)), true_np.zeros((3,3))
+		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
 		s1[2,1] = s2[2,0] = s3[1,0] = 1
 		s1[1,2] = s2[0,2] = s3[0,1] = -1
 
@@ -256,31 +256,31 @@ class Embedding:
 
 		return d1 * s1 + d2 * s2 + d3 * s3
 
-	def project_pymanopt(self, T, isometric=False, R_secret=np.full((3,3), np.inf)):
+	def project_pymanopt(self, T, isometric=False, R_secret=jnp.full((3,3), jnp.inf)):
 		import pymanopt
 		import pymanopt.manifolds
 		import pymanopt.optimizers
 
 		# Rs = special_ortho_group.rvs(3, 2 * self.S.order())
-		# Js = np.array([self.J_functional(R, T, isometric) for R in Rs])
-		# R = Rs[np.argmax(Js)]
+		# Js = jnp.array([self.J_functional(R, T, isometric) for R in Rs])
+		# R = Rs[jnp.argmax(Js)]
 
-		# print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
+		# print("Highest:", jnp.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
-		# R = R_secret + true_np.random.uniform(-0.1, 0.1, (3,3))
-		# U, _, VH = np.linalg.svd(R)
+		# R = R_secret + np.random.uniform(-0.1, 0.1, (3,3))
+		# U, _, VH = jnp.linalg.svd(R)
 		# R = U @ VH
 
-		# R = np.array([
+		# R = jnp.array([
 		# 	[1, 0, 0],
 		# 	[0, 0, -1],
 		# 	[0, 1, 0]
 		# ], dtype=float)
-		# R = R + true_np.random.uniform(-0.1, 0.1, (3,3))
-		# U, _, VH = np.linalg.svd(R)
+		# R = R + np.random.uniform(-0.1, 0.1, (3,3))
+		# U, _, VH = jnp.linalg.svd(R)
 		# R = U @ VH
 
-		R = np.eye(3)
+		R = jnp.eye(3)
 
 		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
 		@pymanopt.function.jax(manifold)
@@ -310,7 +310,7 @@ class Embedding:
 
 		# # print(R + self.J_gradient(R, T, isometric))
 		# bar = R + self.J_gradient(R, T, isometric)
-		# U, _, VH = np.linalg.svd(bar)
+		# U, _, VH = jnp.linalg.svd(bar)
 		# print(R)
 		# print(U @ VH)
 
@@ -338,26 +338,26 @@ class Embedding:
 
 		# print(R_secret, self.J_functional(R_secret, T, isometric))
 		# print(result.point, self.J_functional(result.point, T, isometric))
-		# print(np.linalg.norm(R_secret - result.point))
+		# print(jnp.linalg.norm(R_secret - result.point))
 
 		# import pdb
 		# pdb.set_trace()
 
 		return result.point
 
-	def project_embedding(self, T, isometric=False, step_size=1e-1, convergence_tol=1e-8, max_iters=int(1e3), R_secret=np.full((3,3), np.inf)):
+	def project_embedding(self, T, isometric=False, step_size=1e-1, convergence_tol=1e-8, max_iters=int(1e3), R_secret=jnp.full((3,3), jnp.inf)):
 		# Rs = special_ortho_group.rvs(3, 100 * self.S.order())
 		# Js = [self.J_functional(R, T, isometric) for R in Rs]
-		# R = Rs[np.argmax(Js)]
+		# R = Rs[jnp.argmax(Js)]
 
-		# print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
+		# print("Highest:", jnp.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
-		# R = R_secret + np.random.uniform(-0.1, 0.1, size=((3,3)))
-		# U, _, VH = np.linalg.svd(R)
+		# R = R_secret + jnp.random.uniform(-0.1, 0.1, size=((3,3)))
+		# U, _, VH = jnp.linalg.svd(R)
 		# R = U @ VH
 
 		# R = special_ortho_group.rvs(3)
-		R = np.eye(3)
+		R = jnp.eye(3)
 
 		global vals
 
@@ -370,14 +370,14 @@ class Embedding:
 			dR = self.J_gradient(R, T, isometric)
 			dR /= 0.5
 
-			J_new = -np.inf
+			J_new = -jnp.inf
 			while J_new - J_old < -convergence_tol:
-				# print(np.linalg.norm(dR))
+				# print(jnp.linalg.norm(dR))
 				dR *= 0.5
-				U, _, VH = np.linalg.svd(R + (R @ dR) * step_size)
+				U, _, VH = jnp.linalg.svd(R + (R @ dR) * step_size)
 				R_new = U @ VH
 
-				diff = np.linalg.norm(R_new - R)
+				diff = jnp.linalg.norm(R_new - R)
 
 				J_new = self.J_functional(R_new, T, isometric)
 
@@ -388,7 +388,7 @@ class Embedding:
 			vals.append(J_new - J_old)
 			losses.append(J_old)
 
-			# if np.abs(J_new - J_old) < convergence_tol:
+			# if jnp.abs(J_new - J_old) < convergence_tol:
 			# 	break
 
 			if diff < convergence_tol:
@@ -454,58 +454,58 @@ def beta_D(k):
 
 def C1():
 	alpha = (1, 1, 1)
-	u = np.eye(3)
+	u = jnp.eye(3)
 	S = symmetry.CyclicGroupSO3(1)
 	beta = tuple([1/np.sqrt(2)] * 3)
 	return Embedding(alpha, u, S, beta)
 
 def C2():
 	alpha = (1, 2, 2)
-	u = np.eye(3)
+	u = jnp.eye(3)
 	S = symmetry.CyclicGroupSO3(2)
 	beta = (1/np.sqrt(2), 1/2, 1/2)
 	return Embedding(alpha, u, S, beta)
 
 def CN(n):
 	alpha = (1, n)
-	u = np.array([[1, 0, 0], [0, 1, 0]])
+	u = jnp.array([[1, 0, 0], [0, 1, 0]])
 	S = symmetry.CyclicGroupSO3(n)
 	beta = beta_C(n)
 	return Embedding(alpha, u, S, beta)
 
 def D2():
 	alpha = (2,2,2)
-	u = np.eye(3)
+	u = jnp.eye(3)
 	S = symmetry.DihedralGroup(2)
 	beta = tuple([1/2] * 3)
 	return Embedding(alpha, u, S, beta)
 
 def DN(n):
 	alpha = (2,n)
-	u = np.array([[1, 0, 0], [0, 1, 0]])
+	u = jnp.array([[1, 0, 0], [0, 1, 0]])
 	S = symmetry.DihedralGroup(n)
 	beta = beta_D(n)
 	return Embedding(alpha, u, S, beta)
 
 def T():
 	alpha = (3,)
-	vec = np.array([0.5, 0.5, -0.5])
-	u = [vec / np.linalg.norm(vec)]
+	vec = jnp.array([0.5, 0.5, -0.5])
+	u = [vec / jnp.linalg.norm(vec)]
 	S = symmetry.TetrahedralGroup()
 	beta = (3 / (2 * np.sqrt(2)),)
 	return Embedding(alpha, u, S, beta)
 
 def O():
 	alpha = (4,)
-	u = [np.array([1, 0, 0])]
-	u[0] = u[0] / np.linalg.norm(u[0])
+	u = [jnp.array([1, 0, 0])]
+	u[0] = u[0] / jnp.linalg.norm(u[0])
 	S = symmetry.OctahedralGroup()
 	beta = (3 / (2 * np.sqrt(2)),)
 	return Embedding(alpha, u, S, beta)
 
 def Y():
 	alpha = (10,)
-	u = np.array([[1, 0, 0]])
+	u = jnp.array([[1, 0, 0]])
 	S = symmetry.IcosahedralGroup()
 	beta = (75 / (8 * np.sqrt(95)),)
 	return Embedding(alpha, u, S, beta)
@@ -517,12 +517,12 @@ if __name__ == "__main__":
 
 	# print(symmetrized_tensor_identity(4))
 
-	assert true_np.allclose(beta_C(3), (np.sqrt(5/6), np.sqrt(4/9)))
-	assert true_np.allclose(beta_C(4), (np.sqrt(1/2), np.sqrt(1/2)))
-	assert true_np.allclose(beta_C(6), (np.sqrt(1/12), np.sqrt(8/9)))
-	assert true_np.allclose(beta_D(3), (np.sqrt(5/12), np.sqrt(4/9)))
-	assert true_np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
-	assert true_np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
+	assert np.allclose(beta_C(3), (np.sqrt(5/6), np.sqrt(4/9)))
+	assert np.allclose(beta_C(4), (np.sqrt(1/2), np.sqrt(1/2)))
+	assert np.allclose(beta_C(6), (np.sqrt(1/12), np.sqrt(8/9)))
+	assert np.allclose(beta_D(3), (np.sqrt(5/12), np.sqrt(4/9)))
+	assert np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
+	assert np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
 	for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O()]:
 	# for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O(), Y()]:
@@ -568,8 +568,8 @@ if __name__ == "__main__":
 
 		# # Test the gradient of the J functional
 		# R = special_ortho_group.rvs(3)
-		# a, b, c = true_np.random.uniform([-0.1]*3, [0.1]*3)
-		# s1, s2, s3 = true_np.zeros((3,3)), true_np.zeros((3,3)), true_np.zeros((3,3))
+		# a, b, c = np.random.uniform([-0.1]*3, [0.1]*3)
+		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
 		# s1[2,1] = s2[2,0] = s3[1,0] = 1
 		# s1[1,2] = s2[0,2] = s3[0,1] = -1
 		# s1 = s1 @ R
@@ -725,7 +725,7 @@ if __name__ == "__main__":
 
 	print("\nIcosahedral group")
 	E = Y()
-	R1 = np.eye(3)
+	R1 = special_ortho_group.rvs(3)
 	orbit = E.S.orbit(R1)
 	out = [E(R) for R in orbit]
 	print("Dim", out[0].shape)
