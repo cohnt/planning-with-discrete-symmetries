@@ -261,9 +261,9 @@ class Embedding:
 		import pymanopt.manifolds
 		import pymanopt.optimizers
 
-		# Rs = special_ortho_group.rvs(3, 2 * self.S.order())
-		# Js = jnp.array([self.J_functional(R, T, isometric) for R in Rs])
-		# R = Rs[jnp.argmax(Js)]
+		Rs = special_ortho_group.rvs(3, 2 * self.S.order())
+		Js = jnp.array([self.J_functional(R, T, isometric) for R in Rs])
+		R = Rs[jnp.argmax(Js)]
 
 		# print("Highest:", jnp.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
@@ -280,7 +280,7 @@ class Embedding:
 		# U, _, VH = jnp.linalg.svd(R)
 		# R = U @ VH
 
-		R = jnp.eye(3)
+		# R = jnp.eye(3)
 
 		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
 		@pymanopt.function.jax(manifold)
@@ -320,11 +320,11 @@ class Embedding:
 		# problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
 		# problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
 		# optimizer = pymanopt.optimizers.SteepestDescent()
-		# optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
+		optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
 
-		verbosity = 2
-		ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
-		optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
+		# verbosity = 2
+		# ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
+		# optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
 
 		# optimizer = pymanopt.optimizers.nelder_mead.NelderMead(max_cost_evaluations=20000, max_iterations=4000)
 		# R = None
@@ -336,9 +336,9 @@ class Embedding:
 
 		# print(result)
 
-		print(R_secret, self.J_functional(R_secret, T, isometric))
-		print(result.point, self.J_functional(result.point, T, isometric))
-		print(jnp.linalg.norm(R_secret - result.point))
+		# print(R_secret, self.J_functional(R_secret, T, isometric))
+		# print(result.point, self.J_functional(result.point, T, isometric))
+		# print(jnp.linalg.norm(R_secret - result.point))
 
 		# import pdb
 		# pdb.set_trace()
@@ -524,12 +524,9 @@ if __name__ == "__main__":
 	assert np.allclose(beta_D(4), (1/2, np.sqrt(1/2)))
 	assert np.allclose(beta_D(6), (np.sqrt(1/24), np.sqrt(8/9)))
 
-	# for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O()]:
 	# for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O(), Y()]:
-	# 	print(E.S.order(), "\t", np.sum(3 ** np.array(E.alpha)), end="\t")
-	# for E in [C2(), CN(3), CN(4), CN(6), D2(), DN(3), DN(4), T(), O()]:
-	# for E in [Y()]:
-	for E in [CN(6)]:
+	for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O()]:
+		print("Group order", E.S.order(), "\tEmbedding Output Ambient Dimension", np.sum([3 ** np.array(E.alpha)]))
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
 		# v1 = E.E_alpha_u_S(E.so3_action(R, S))
@@ -595,28 +592,20 @@ if __name__ == "__main__":
 		# print("Should be positive", E.J_functional(S_new, E.E_alpha_beta_u_S(R), isometric=True) - E.J_functional(S, E.E_alpha_beta_u_S(R), isometric=True))
 
 		# Check projection
-		# R = special_ortho_group.rvs(3)
-		# R = np.eye(3)
-		R = np.array([
-			[-0.85813014, 0.36723283, 0.35882128],
- 			[0.20750331, -0.39119142, 0.8966112],
- 			[0.46963288, 0.8438657, 0.25949112]
- 		])
-		T = E(R, isometric=True, centered=False, project=False)
+		R = special_ortho_group.rvs(3)
+		out = E(R, isometric=True, centered=False, project=False)
 
 		# print(R)
-		# print(E.project_embedding(T, isometric=False))
-		# print("Should be nearly zero", np.linalg.norm(R - E.project_embedding(T, isometric=False)))
-		# proj = E.project_embedding(T, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
-		# proj = E.project_embedding(T, isometric=False, R_secret=R)
-		proj = E.project_pymanopt(T, isometric=True, R_secret=R)
+		# print(E.project_embedding(out, isometric=False))
+		# print("Should be nearly zero", np.linalg.norm(R - E.project_embedding(out, isometric=False)))
+		# proj = E.project_embedding(out, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
+		# proj = E.project_embedding(out, isometric=False, R_secret=R)
+		proj = E.project_pymanopt(out, isometric=True, R_secret=R)
 		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		# print(np.min(vals))
 		# success_fail.append(E.S.equivalent(R, proj))
 
 	# print(np.min(np.array(vals)))
-
-	exit(0)
 
 	print("\nCyclic group with 1 element")
 	E = C1()
@@ -729,12 +718,12 @@ if __name__ == "__main__":
 	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
 	print("Should be nonzero:", np.linalg.norm(out[0]))
 
-	print("\nIcosahedral group")
-	E = Y()
-	R1 = special_ortho_group.rvs(3)
-	orbit = E.S.orbit(R1)
-	out = [E(R) for R in orbit]
-	print("Dim", out[0].shape)
-	print("Should be practically zero:", np.max(np.var(out, axis=0)))
-	print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
-	print("Should be nonzero:", np.linalg.norm(out[0]))
+	# print("\nIcosahedral group")
+	# E = Y()
+	# R1 = special_ortho_group.rvs(3)
+	# orbit = E.S.orbit(R1)
+	# out = [E(R) for R in orbit]
+	# print("Dim", out[0].shape)
+	# print("Should be practically zero:", np.max(np.var(out, axis=0)))
+	# print("Should be practically zero:", np.max(np.var([np.linalg.norm(E(R)) for R in special_ortho_group.rvs(3, 10)])))
+	# print("Should be nonzero:", np.linalg.norm(out[0]))
