@@ -188,7 +188,7 @@ class Embedding:
 		#
 		return self.affine_hull.ToGlobalCoordinates(v).flatten()
 
-	def J_functional(self, R, T, isometric=False):
+	def J_functional(self, R, T, isometric=True):
 		T = self.embedding_flat_to_tensor(T)
 
 		if isometric:
@@ -202,7 +202,7 @@ class Embedding:
 				for alpha_i, u_i, T_i in zip(self.alpha, self.u, T)
 			]))
 
-	def J_directional_derivative(self, R, T, s, isometric=False):
+	def J_directional_derivative(self, R, T, s, isometric=True):
 		# Directional derivative of J at R in direction sR
 		assert jnp.linalg.norm(s + s.T) < 1e-12
 		
@@ -233,7 +233,7 @@ class Embedding:
 				for i, (alpha_i, u_i, T_i) in enumerate(zip(self.alpha, self.u, T))
 			]))
 
-	def J_gradient(self, R, T, isometric=False):
+	def J_gradient(self, R, T, isometric=True):
 		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
 		# s1[2,1] = s2[2,0] = s3[1,0] = 1
 		# s1[1,2] = s2[0,2] = s3[0,1] = -1
@@ -245,7 +245,7 @@ class Embedding:
 		# return (d1 * s1 + d2 * s2 + d3 * s3) @ R
 		return self.J_gradient_local(R, T, isometric) @ R
 
-	def J_gradient_local(self, R, T, isometric=False):
+	def J_gradient_local(self, R, T, isometric=True):
 		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
 		s1[2,1] = s2[2,0] = s3[1,0] = 1
 		s1[1,2] = s2[0,2] = s3[0,1] = -1
@@ -256,7 +256,7 @@ class Embedding:
 
 		return d1 * s1 + d2 * s2 + d3 * s3
 
-	def project_pymanopt(self, T, isometric=False, R_secret=jnp.full((3,3), jnp.inf)):
+	def project_pymanopt(self, T, isometric=True, R_secret=jnp.full((3,3), jnp.inf)):
 		import pymanopt
 		import pymanopt.manifolds
 		import pymanopt.optimizers
@@ -345,7 +345,7 @@ class Embedding:
 
 		return result.point
 
-	def project_embedding(self, T, isometric=False, step_size=1e-1, convergence_tol=1e-8, max_iters=int(1e3), R_secret=jnp.full((3,3), jnp.inf)):
+	def project_embedding(self, T, isometric=True, step_size=1e-1, convergence_tol=1e-8, max_iters=int(1e3), R_secret=jnp.full((3,3), jnp.inf)):
 		# Rs = special_ortho_group.rvs(3, 100 * self.S.order())
 		# Js = [self.J_functional(R, T, isometric) for R in Rs]
 		# R = Rs[jnp.argmax(Js)]
