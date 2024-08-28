@@ -224,28 +224,18 @@ class Embedding:
 			])) / self.S.order()
 		else:
 			return jnp.sum(jnp.array([
-				alpha_i * jnp.inner(
-					jnp.tensordot(s, (
-							self.embedding_action_i(R, self.E_alphai_ui(jnp.eye(3), alpha_i, u_i), i)
-						).reshape([3] * alpha_i),
-						1
-					).flatten(),
-					T_i
-				)
-				for i, (alpha_i, u_i, T_i) in enumerate(zip(self.alpha, self.u, T))
-			]))
-
-	# def J_gradient(self, R, T, isometric=True):
-	# 	# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
-	# 	# s1[2,1] = s2[2,0] = s3[1,0] = 1
-	# 	# s1[1,2] = s2[0,2] = s3[0,1] = -1
-
-	# 	# d1 = self.J_directional_derivative(R, T, s1, isometric)
-	# 	# d2 = self.J_directional_derivative(R, T, s2, isometric)
-	# 	# d3 = self.J_directional_derivative(R, T, s3, isometric)
-
-	# 	# return (d1 * s1 + d2 * s2 + d3 * s3) @ R
-	# 	return self.J_gradient_local(R, T, isometric) @ R
+				jnp.sum(jnp.array([
+					alpha_i * jnp.inner(
+						jnp.tensordot(s, (
+								self.embedding_action_i(R @ O, self.E_alphai_ui(jnp.eye(3), alpha_i, beta_i, u_i), i)
+							).reshape([3] * alpha_i),
+							1
+						).flatten(),
+						T_i
+					)
+					for i, (alpha_i, u_i, T_i) in enumerate(zip(self.alpha, self.u, T))
+				])) for O in self.S.matrices
+			])) / self.S.order()
 
 	def J_gradient(self, R, T, isometric=True):
 		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
