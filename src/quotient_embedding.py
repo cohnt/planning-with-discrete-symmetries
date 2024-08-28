@@ -259,79 +259,16 @@ class Embedding:
 
 		# print("Highest:", jnp.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
-		# R = R_secret + np.random.uniform(-0.1, 0.1, (3,3))
-		# U, _, VH = jnp.linalg.svd(R)
-		# R = U @ VH
-
-		# R = jnp.array([
-		# 	[1, 0, 0],
-		# 	[0, 0, -1],
-		# 	[0, 1, 0]
-		# ], dtype=float)
-		# R = R + np.random.uniform(-0.1, 0.1, (3,3))
-		# U, _, VH = jnp.linalg.svd(R)
-		# R = U @ VH
-
-		# R = jnp.eye(3)
-
 		manifold = pymanopt.manifolds.SpecialOrthogonalGroup(n=3, k=1, retraction="polar")
 		@pymanopt.function.jax(manifold)
 		def cost(point):
 			return -self.J_functional(point, T, isometric)
 
-		@pymanopt.function.jax(manifold)
-		def grad(point):
-			return -self.J_gradient(point, T, isometric)
-
-		@pymanopt.function.jax(manifold)
-		def rgrad(point):
-			return point.T @ -self.J_gradient(point, T, isometric)
-
-		# foo = lambda x, T=T, isometric=isometric : self.J_functional(x, T, isometric)
-
-		# print("R_secret", R_secret)
-		# print("R", R)
-		# print()
-
-		# J_prime = jax.grad(foo)
-		# print(J_prime(R) - J_prime(R).T)
-		# print(rgrad(R))
-		# print()
-
-		# # print(R + self.J_gradient(R, T, isometric))
-		# bar = R + self.J_gradient(R, T, isometric)
-		# U, _, VH = jnp.linalg.svd(bar)
-		# print(R)
-		# print(U @ VH)
-
-		# exit(0)
-
-		# problem = pymanopt.Problem(manifold, cost)
-		# problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
-		problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
-		
-		verbosity = 2
+		problem = pymanopt.Problem(manifold, cost)
+		verbosity = 0
 		optimizer = pymanopt.optimizers.SteepestDescent(verbosity=verbosity)
 
-		# ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
-		# optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
-
-		# optimizer = pymanopt.optimizers.nelder_mead.NelderMead(max_cost_evaluations=20000, max_iterations=4000)
-		# R = None
-
-		# optimizer = pymanopt.optimizers.particle_swarm.ParticleSwarm()
-		# R = None
-
 		result = optimizer.run(problem, initial_point=R)
-
-		# print(result)
-
-		# print(R_secret, self.J_functional(R_secret, T, isometric))
-		# print(result.point, self.J_functional(result.point, T, isometric))
-		# print(jnp.linalg.norm(R_secret - result.point))
-
-		# import pdb
-		# pdb.set_trace()
 
 		return result.point
 
@@ -340,14 +277,7 @@ class Embedding:
 		Js = [self.J_functional(R, T, isometric) for R in Rs]
 		R = Rs[np.argmax(Js)]
 
-		print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
-
-		# R = R_secret + jnp.random.uniform(-0.1, 0.1, size=((3,3)))
-		# U, _, VH = jnp.linalg.svd(R)
-		# R = U @ VH
-
-		# R = special_ortho_group.rvs(3)
-		# R = jnp.eye(3)
+		# print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
 		global vals
 
@@ -591,7 +521,8 @@ if __name__ == "__main__":
 		# print(E.project_embedding(out, isometric=False))
 		# print("Should be nearly zero", np.linalg.norm(R - E.project_embedding(out, isometric=False)))
 		# proj = E.project_embedding(out, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
-		# proj = E.project_embedding(out, isometric=True, R_secret=R)
+		proj = E.project_embedding(out, isometric=True, R_secret=R)
+		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		proj = E.project_pymanopt(out, isometric=True, R_secret=R)
 		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		# print(np.min(vals))
