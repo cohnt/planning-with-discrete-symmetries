@@ -295,7 +295,7 @@ class Embedding:
 
 		@pymanopt.function.jax(manifold)
 		def rgrad(point):
-			return -self.J_gradient(point, T, isometric)
+			return point.T @ -self.J_gradient(point, T, isometric)
 
 		# foo = lambda x, T=T, isometric=isometric : self.J_functional(x, T, isometric)
 
@@ -319,10 +319,10 @@ class Embedding:
 		# problem = pymanopt.Problem(manifold, cost)
 		# problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
 		problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
-		# optimizer = pymanopt.optimizers.SteepestDescent()
-		optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
+		
+		verbosity = 2
+		optimizer = pymanopt.optimizers.SteepestDescent(verbosity=verbosity)
 
-		# verbosity = 2
 		# ls = pymanopt.optimizers.line_search.BackTrackingLineSearcher(max_iterations=1000, initial_step_size=1)
 		# optimizer = pymanopt.optimizers.SteepestDescent(min_gradient_norm=1e-12, min_step_size=1e-20, max_cost_evaluations=100000, line_searcher=ls, verbosity=verbosity)
 
@@ -380,7 +380,8 @@ class Embedding:
 
 				J_new = self.J_functional(R_new, T, isometric)
 
-				break
+				# break
+				# print(np.linalg.norm(dR))
 			# print(J_new)
 
 			R = R_new
@@ -600,8 +601,8 @@ if __name__ == "__main__":
 		# print(E.project_embedding(out, isometric=False))
 		# print("Should be nearly zero", np.linalg.norm(R - E.project_embedding(out, isometric=False)))
 		# proj = E.project_embedding(out, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
-		proj = E.project_embedding(out, isometric=True, R_secret=R)
-		# proj = E.project_pymanopt(out, isometric=True, R_secret=R)
+		# proj = E.project_embedding(out, isometric=True, R_secret=R)
+		proj = E.project_pymanopt(out, isometric=True, R_secret=R)
 		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		# print(np.min(vals))
 		# success_fail.append(E.S.equivalent(R, proj))
