@@ -521,16 +521,12 @@ if __name__ == "__main__":
 		# print(E.project_embedding(out, isometric=False))
 		# print("Should be nearly zero", np.linalg.norm(R - E.project_embedding(out, isometric=False)))
 		# proj = E.project_embedding(out, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
-		proj = E.project_embedding(out, isometric=True, R_secret=R)
-		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
+		# proj = E.project_embedding(out, isometric=True, R_secret=R)
+		# print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		proj = E.project_pymanopt(out, isometric=True, R_secret=R)
 		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		# print(np.min(vals))
 		# success_fail.append(E.S.equivalent(R, proj))
-
-	# print(np.min(np.array(vals)))
-
-	exit(0)
 
 	print("\nCyclic group with 1 element")
 	E = C1()
