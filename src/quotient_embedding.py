@@ -210,16 +210,18 @@ class Embedding:
 
 		if isometric:
 			return jnp.sum(jnp.array([
-				alpha_i * jnp.inner(
-					jnp.tensordot(s, (
-							self.embedding_action_i(R, self.E_alphai_betai_ui(jnp.eye(3), alpha_i, beta_i, u_i), i)
-						).reshape([3] * alpha_i),
-						1
-					).flatten(),
-					T_i
-				)
-				for i, (alpha_i, beta_i, u_i, T_i) in enumerate(zip(self.alpha, self.beta, self.u, T))
-			]))
+				jnp.sum(jnp.array([
+					alpha_i * jnp.inner(
+						jnp.tensordot(s, (
+								self.embedding_action_i(R @ O, self.E_alphai_betai_ui(jnp.eye(3), alpha_i, beta_i, u_i), i)
+							).reshape([3] * alpha_i),
+							1
+						).flatten(),
+						T_i
+					)
+					for i, (alpha_i, beta_i, u_i, T_i) in enumerate(zip(self.alpha, self.beta, self.u, T))
+				])) for O in self.S.matrices
+			])) / self.S.order()
 		else:
 			return jnp.sum(jnp.array([
 				alpha_i * jnp.inner(
@@ -233,19 +235,19 @@ class Embedding:
 				for i, (alpha_i, u_i, T_i) in enumerate(zip(self.alpha, self.u, T))
 			]))
 
+	# def J_gradient(self, R, T, isometric=True):
+	# 	# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
+	# 	# s1[2,1] = s2[2,0] = s3[1,0] = 1
+	# 	# s1[1,2] = s2[0,2] = s3[0,1] = -1
+
+	# 	# d1 = self.J_directional_derivative(R, T, s1, isometric)
+	# 	# d2 = self.J_directional_derivative(R, T, s2, isometric)
+	# 	# d3 = self.J_directional_derivative(R, T, s3, isometric)
+
+	# 	# return (d1 * s1 + d2 * s2 + d3 * s3) @ R
+	# 	return self.J_gradient_local(R, T, isometric) @ R
+
 	def J_gradient(self, R, T, isometric=True):
-		# s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
-		# s1[2,1] = s2[2,0] = s3[1,0] = 1
-		# s1[1,2] = s2[0,2] = s3[0,1] = -1
-
-		# d1 = self.J_directional_derivative(R, T, s1, isometric)
-		# d2 = self.J_directional_derivative(R, T, s2, isometric)
-		# d3 = self.J_directional_derivative(R, T, s3, isometric)
-
-		# return (d1 * s1 + d2 * s2 + d3 * s3) @ R
-		return self.J_gradient_local(R, T, isometric) @ R
-
-	def J_gradient_local(self, R, T, isometric=True):
 		s1, s2, s3 = np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3))
 		s1[2,1] = s2[2,0] = s3[1,0] = 1
 		s1[1,2] = s2[0,2] = s3[0,1] = -1
@@ -254,7 +256,7 @@ class Embedding:
 		d2 = self.J_directional_derivative(R, T, s2, isometric)
 		d3 = self.J_directional_derivative(R, T, s3, isometric)
 
-		return d1 * s1 + d2 * s2 + d3 * s3
+		return d1 * (s1 @ R) + d2 * (s2 @ R) + d3 * (s3 @ R)
 
 	def project_pymanopt(self, T, isometric=True, R_secret=jnp.full((3,3), jnp.inf)):
 		import pymanopt
@@ -289,13 +291,11 @@ class Embedding:
 
 		@pymanopt.function.jax(manifold)
 		def grad(point):
-			# print(-self.J_gradient(point, T, isometric))
 			return -self.J_gradient(point, T, isometric)
 
 		@pymanopt.function.jax(manifold)
 		def rgrad(point):
-			# print(point @ (-self.J_gradient_local(point, T, isometric)))
-			return point @ (-self.J_gradient_local(point, T, isometric))
+			return -self.J_gradient(point, T, isometric)
 
 		# foo = lambda x, T=T, isometric=isometric : self.J_functional(x, T, isometric)
 
@@ -316,9 +316,9 @@ class Embedding:
 
 		# exit(0)
 
-		problem = pymanopt.Problem(manifold, cost)
+		# problem = pymanopt.Problem(manifold, cost)
 		# problem = pymanopt.Problem(manifold, cost, euclidean_gradient=grad)
-		# problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
+		problem = pymanopt.Problem(manifold, cost, riemannian_gradient=rgrad)
 		# optimizer = pymanopt.optimizers.SteepestDescent()
 		optimizer = pymanopt.optimizers.SteepestDescent(verbosity=0)
 
@@ -345,19 +345,19 @@ class Embedding:
 
 		return result.point
 
-	def project_embedding(self, T, isometric=True, step_size=1e-1, convergence_tol=1e-8, max_iters=int(1e3), R_secret=jnp.full((3,3), jnp.inf)):
-		# Rs = special_ortho_group.rvs(3, 100 * self.S.order())
-		# Js = [self.J_functional(R, T, isometric) for R in Rs]
-		# R = Rs[jnp.argmax(Js)]
+	def project_embedding(self, T, isometric=True, step_size=1e-2, convergence_tol=1e-6, max_iters=int(1e3), R_secret=jnp.full((3,3), jnp.inf)):
+		Rs = special_ortho_group.rvs(3, 2 * self.S.order())
+		Js = [self.J_functional(R, T, isometric) for R in Rs]
+		R = Rs[np.argmax(Js)]
 
-		# print("Highest:", jnp.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
+		print("Highest:", np.max(Js), "\tActual:", self.J_functional(R_secret, T, isometric))
 
 		# R = R_secret + jnp.random.uniform(-0.1, 0.1, size=((3,3)))
 		# U, _, VH = jnp.linalg.svd(R)
 		# R = U @ VH
 
 		# R = special_ortho_group.rvs(3)
-		R = jnp.eye(3)
+		# R = jnp.eye(3)
 
 		global vals
 
@@ -372,16 +372,16 @@ class Embedding:
 
 			J_new = -jnp.inf
 			while J_new - J_old < -convergence_tol:
-				# print(jnp.linalg.norm(dR))
 				dR *= 0.5
-				U, _, VH = jnp.linalg.svd(R + (R @ dR) * step_size)
+				U, _, VH = jnp.linalg.svd(R + dR * step_size)
 				R_new = U @ VH
 
 				diff = jnp.linalg.norm(R_new - R)
 
 				J_new = self.J_functional(R_new, T, isometric)
 
-				# break
+				break
+			# print(J_new)
 
 			R = R_new
 			
@@ -399,7 +399,7 @@ class Embedding:
 		plt.plot(losses)
 		plt.show()
 
-		return R
+		return np.array(R)
 
 	def __call__(self, R, isometric=True, centered=False, project=True):
 		if not isometric and not centered:
@@ -526,6 +526,7 @@ if __name__ == "__main__":
 
 	# for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O(), Y()]:
 	for E in [C1(), C2(), CN(3), CN(4), CN(5), CN(6), D2(), DN(3), DN(4), DN(5), DN(6), T(), O()]:
+	# for E in [C2()]:
 		print("Group order", E.S.order(), "\tEmbedding Output Ambient Dimension", np.sum([3 ** np.array(E.alpha)]))
 		# # Check equivariance
 		# R, S = special_ortho_group.rvs(3, 2)
@@ -599,13 +600,15 @@ if __name__ == "__main__":
 		# print(E.project_embedding(out, isometric=False))
 		# print("Should be nearly zero", np.linalg.norm(R - E.project_embedding(out, isometric=False)))
 		# proj = E.project_embedding(out, isometric=False, step_size=1e-2, convergence_tol=1e-8, max_iters=int(1e5))
-		# proj = E.project_embedding(out, isometric=False, R_secret=R)
-		proj = E.project_pymanopt(out, isometric=True, R_secret=R)
+		proj = E.project_embedding(out, isometric=True, R_secret=R)
+		# proj = E.project_pymanopt(out, isometric=True, R_secret=R)
 		print("Should be true", E.S.equivalent(R, proj, tol=1e-2))
 		# print(np.min(vals))
 		# success_fail.append(E.S.equivalent(R, proj))
 
 	# print(np.min(np.array(vals)))
+
+	exit(0)
 
 	print("\nCyclic group with 1 element")
 	E = C1()
