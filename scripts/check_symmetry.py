@@ -7,6 +7,7 @@ import time
 from scipy.stats import special_ortho_group
 
 import src.symmetry
+import src.util
 
 from pydrake.all import (
 	StartMeshcat,
@@ -33,8 +34,7 @@ builder = DiagramBuilder()
 plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
 
 parser = Parser(plant)
-repo_dir = str(pathlib.Path(__file__).parent.parent.resolve())
-parser.package_map().Add("symmetries", repo_dir)
+parser.package_map().Add("symmetries", src.util.repo_dir())
 directives = LoadModelDirectivesFromString(directives_str)
 models = ProcessModelDirectives(directives, plant, parser)
 
