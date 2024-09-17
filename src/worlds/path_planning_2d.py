@@ -126,21 +126,18 @@ def add_obstacles_to_directives(directives, tris, path):
 	return directives_str
 
 def to_pose_3d(pose_2d):
-	# Given (x, y, theta), return corresponding (qw, qx, qy, qz, x, y, z)
+	# Given (x, y, theta), return (x, y, z, r, p, y), with z=r=p=0, and y=theta
 	# (Note that the prism models assume the x axis is the axis of symmetry)
-	rpy = RotationMatrix(RollPitchYaw(0, -np.pi/2, 0)) @ RotationMatrix(RollPitchYaw(pose_2d[2], 0, 0))
-	out = np.zeros(7)
-	out[0:4] = rpy.ToQuaternion().wxyz()
-	out[4] = pose_2d[0]
-	out[5] = pose_2d[1]
-	out[6] = 0
-	return out
+	return np.array([pose_2d[0], pose_2d[1], 0, 0, 0, pose_2d[2]])
 
 if __name__ == "__main__":
 	directives_str = """directives:
 - add_model:
-    name: pentagon
-    file: package://symmetries/models/prisms/pentagonal_prism.sdf
+    name: triangle
+    file: package://symmetries/models/prisms/triangular_prism_2d.sdf
+- add_weld:
+    parent: world
+    child: triangle::base
 """
 
 	limits = np.array([[0, 20], [0, 20]])
