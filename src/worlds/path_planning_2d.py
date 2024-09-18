@@ -66,6 +66,12 @@ def make_triangle_obj_sdf(vertices, name, path):
                     <uri>%s.obj</uri>
                 </mesh>
             </geometry>
+            <material>
+                <ambient>1 0.5 0.5 1</ambient>
+                <diffuse>1 0.5 0.5 1</diffuse>
+                <specular>1 0.5 0.5 1</specular>
+                <emissive>1 0.5 0.5 1</emissive>
+            </material>
         </visual>
         <collision name="base_collision">
             <geometry>
@@ -160,11 +166,19 @@ if __name__ == "__main__":
 
     plant.Finalize()
 
+    meshcat_visual_params = MeshcatVisualizerParams()
+    meshcat_visual_params.delete_on_initialization_event = False
+    meshcat_visual_params.role = Role.kIllustration
+    meshcat_visual_params.prefix = "visual"
+    meshcat_visual_params.visible_by_default = True
+    meshcat_visual = MeshcatVisualizer.AddToBuilder(
+        builder, scene_graph, meshcat, meshcat_visual_params)
+
     meshcat_collision_params = MeshcatVisualizerParams()
     meshcat_collision_params.delete_on_initialization_event = False
     meshcat_collision_params.role = Role.kProximity
     meshcat_collision_params.prefix = "collision"
-    meshcat_collision_params.visible_by_default = True
+    meshcat_collision_params.visible_by_default = False
     meshcat_collision = MeshcatVisualizer.AddToBuilder(
         builder, scene_graph, meshcat, meshcat_collision_params)
 
@@ -183,7 +197,9 @@ if __name__ == "__main__":
     tf = RigidTransform(RotationMatrix(rot), trans)
 
     meshcat.Set2dRenderMode(X_WC=tf, xmin=limits[0][0], xmax=limits[0][1], ymin=limits[1][0], ymax=limits[1][1])
-    meshcat.SetProperty("/Lights", "visible", False)
+    meshcat.SetProperty("/Lights/PointLightNegativeX", "visible", False)
+    meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
+    meshcat.SetProperty("/Lights/FillLight", "visible", False)
 
     plant.SetPositions(plant_context, to_pose_3d([10, 10, 0]))
     diagram.ForcedPublish(diagram_context)
