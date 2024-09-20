@@ -131,11 +131,6 @@ def add_obstacles_to_directives(directives, tris, path):
 """ % (name, os.path.join(path, name), name)
     return directives_str
 
-def to_pose_3d(pose_2d):
-    # Given (x, y, theta), return (x, y, z, r, p, y), with z=r=p=0, and y=theta
-    # (Note that the prism models assume the x axis is the axis of symmetry)
-    return np.array([pose_2d[0], pose_2d[1], 0, 0, 0, pose_2d[2]])
-
 if __name__ == "__main__":
     directives_str = """directives:
 - add_model:
@@ -201,12 +196,12 @@ if __name__ == "__main__":
     meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
     meshcat.SetProperty("/Lights/FillLight", "visible", False)
 
-    plant.SetPositions(plant_context, to_pose_3d([10, 10, 0]))
+    plant.SetPositions(plant_context, [10, 10, 0])
     diagram.ForcedPublish(diagram_context)
     time.sleep(5)
 
     while True:
         for i in range(100):
-            plant.SetPositions(plant_context, to_pose_3d([i / 100. * 20, i / 100. * 10, i / 100. * 2 * np.pi]))
+            plant.SetPositions(plant_context, [i / 100. * 20, i / 100. * 10, i / 100. * 2 * np.pi])
             diagram.ForcedPublish(diagram_context)
             time.sleep(0.1)

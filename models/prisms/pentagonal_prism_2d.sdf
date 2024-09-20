@@ -1,6 +1,6 @@
 <?xml version='1.0'?>
 <sdf version='1.4'>
-  <model name="pentagon">
+  <model name="hexagon">
 
     <link name="base">
       <pose>0 0 0 0 0 0</pose>
@@ -20,25 +20,7 @@
         <mass>0.01</mass>
       </inertial>
     </link>
-    <link name="link_prismatic_z">
-      <pose>0 0 0 0 0 0</pose>
-      <inertial>
-        <mass>0.01</mass>
-      </inertial>
-    </link>
-    <link name="link_revolute_x">
-      <pose>0 0 0 0 0 0</pose>
-      <inertial>
-        <mass>0.01</mass>
-      </inertial>
-    </link>
-    <link name="link_revolute_y">
-      <pose>0 0 0 0 0 0</pose>
-      <inertial>
-        <mass>0.01</mass>
-      </inertial>
-    </link>
-    <link name="link_revolute_z">
+    <link name="link_revolute">
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <mass>0.01</mass>
@@ -67,42 +49,17 @@
         </limit>
       </axis>
     </joint>
-    <joint name="prismatic_z" type="prismatic">
-      <parent>link_prismatic_y</parent>
-      <child>link_prismatic_z</child>
-      <axis>
-        <xyz>0 0 1</xyz>
-        <limit>
-          <lower>0</lower>
-          <upper>0.3</upper>
-        </limit>
-      </axis>
-    </joint>
 
-    <joint name="revolute_x" type="continuous">
-      <parent>link_prismatic_z</parent>
-      <child>link_revolute_x</child>
-      <axis>
-        <xyz>1 0 0</xyz>
-      </axis>
-    </joint>
-    <joint name="revolute_y" type="continuous">
-      <parent>link_revolute_x</parent>
-      <child>link_revolute_y</child>
-      <axis>
-        <xyz>0 1 0</xyz>
-      </axis>
-    </joint>
-    <joint name="revolute_z" type="continuous">
-      <parent>link_revolute_y</parent>
-      <child>link_revolute_z</child>
+    <joint name="revolute" type="continuous">
+      <parent>link_prismatic_y</parent>
+      <child>link_revolute</child>
       <axis>
         <xyz>0 0 1</xyz>
       </axis>
     </joint>
 
     <joint name="connector" type="fixed">
-      <parent>link_revolute_z</parent>
+      <parent>link_revolute</parent>
       <child>thing</child>
     </joint>
 
