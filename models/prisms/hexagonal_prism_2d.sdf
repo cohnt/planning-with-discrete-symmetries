@@ -32,10 +32,6 @@
       <child>link_prismatic_x</child>
       <axis>
         <xyz>1 0 0</xyz>
-        <limit>
-          <lower>0</lower>
-          <upper>4.5</upper>
-        </limit>
       </axis>
     </joint>
     <joint name="prismatic_y" type="prismatic">
@@ -43,10 +39,6 @@
       <child>link_prismatic_y</child>
       <axis>
         <xyz>0 1 0</xyz>
-        <limit>
-          <lower>0</lower>
-          <upper>4.5</upper>
-        </limit>
       </axis>
     </joint>
 
