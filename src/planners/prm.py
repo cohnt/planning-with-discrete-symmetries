@@ -32,9 +32,11 @@ class PRM:
         while len(nodes) < self.options.max_vertices:
             candidate_nodes = self.Sampler(self.options.max_vertices - len(nodes))
             validity_mask = self.CollisionChecker.CheckConfigsCollisionFree(candidate_nodes)
-            nodes = np.append(nodes, candidate_nodes[validity_mask])
+            nodes = np.append(nodes, candidate_nodes[np.nonzero(validity_mask)], axis=0)
             progress_bar.n = nodes.shape[0]
             progress_bar.refresh()
+
+        self.nodes = nodes
 
         # for i in tqdm(range(len(self.graph), self.options.max_vertices)):
         #     while True:
