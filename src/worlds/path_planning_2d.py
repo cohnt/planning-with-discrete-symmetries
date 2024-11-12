@@ -3,6 +3,11 @@ import os.path
 import time
 import pathlib
 import alphashape
+import typing
+
+from dataclasses import dataclass
+
+from src.util import repo_dir
 
 from pydrake.all import (
     StartMeshcat,
@@ -17,8 +22,17 @@ from pydrake.all import (
     RotationMatrix,
     RigidTransform,
     RollPitchYaw,
-    RotationMatrix
+    RotationMatrix,
+    AddDefaultVisualization
 )
+
+@dataclass
+class SetupParams:
+    n_sides: int
+    limits: np.ndarray[(2,2)]
+    n_obstacle_points: int
+    alpha: float
+    seed: int
 
 def make_triangle_obj_sdf(vertices, name, path):
     assert len(vertices) == 3
@@ -131,26 +145,41 @@ def add_obstacles_to_directives(directives, tris, path):
 """ % (name, os.path.join(path, name), name)
     return directives_str
 
-if __name__ == "__main__":
-    directives_str = """directives:
+def build_env(meshcat, params : SetupParams):
+    if params.n_sides == 1:
+        raise NotImplementedError # TODO
+    elif params.n_sides == 2:
+        raise NotImplementedError # TODO
+    elif params.n_sides == 3:
+        shape = "prisms/triangular_prism_2d.sdf"
+    elif params.n_sides == 4:
+        raise NotImplementedError # TODO
+    elif params.n_sides == 5:
+        shape = "prisms/pentagonal_prism_2d.sdf"
+    elif params.n_sides == 6:
+        shape = "prisms/hexagonal_prism_2d.sdf"
+    elif params.n_sides == 8:
+        shape = "prisms/octagonal_prism_2d.sdf"
+    else:
+        raise NotImplementedError # Not planned
+
+    directives_str = f"""directives:
 - add_model:
-    name: triangle
-    file: package://symmetries/models/prisms/triangular_prism_2d.sdf
+    name: robot
+    file: package://symmetries/models/{shape}
 - add_weld:
     parent: world
-    child: triangle::base
+    child: robot::base
 """
 
-    limits = np.array([[0, 20], [0, 20]])
-    tris = alphashape_make_obstacles(limits, n_points=200, alpha=1., seed=0, add_limits_as_obstacles=False)
+    tris = alphashape_make_obstacles(params.limits,
+                                     n_points=params.n_obstacle_points,
+                                     alpha=params.alpha,
+                                     seed=params.seed,
+                                     add_limits_as_obstacles=False)
 
-    from src.util import repo_dir
-    path = "models/dynamically_generated"
-    directives_str = add_obstacles_to_directives(directives_str, tris, path)
+    directives_str = add_obstacles_to_directives(directives_str, tris, "models/dynamically_generated")
 
-    # print(directives_str)
-    
-    meshcat = StartMeshcat()
     builder = DiagramBuilder()
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
 
@@ -158,26 +187,19 @@ if __name__ == "__main__":
     parser.package_map().Add("symmetries", repo_dir())
     directives = LoadModelDirectivesFromString(directives_str)
     models = ProcessModelDirectives(directives, plant, parser)
-
     plant.Finalize()
 
-    meshcat_visual_params = MeshcatVisualizerParams()
-    meshcat_visual_params.delete_on_initialization_event = False
-    meshcat_visual_params.role = Role.kIllustration
-    meshcat_visual_params.prefix = "visual"
-    meshcat_visual_params.visible_by_default = True
-    meshcat_visual = MeshcatVisualizer.AddToBuilder(
-        builder, scene_graph, meshcat, meshcat_visual_params)
-
-    meshcat_collision_params = MeshcatVisualizerParams()
-    meshcat_collision_params.delete_on_initialization_event = False
-    meshcat_collision_params.role = Role.kProximity
-    meshcat_collision_params.prefix = "collision"
-    meshcat_collision_params.visible_by_default = False
-    meshcat_collision = MeshcatVisualizer.AddToBuilder(
-        builder, scene_graph, meshcat, meshcat_collision_params)
-
+    AddDefaultVisualization(builder, meshcat)
     diagram = builder.Build()
+
+    return diagram, plant
+
+if __name__ == "__main__":
+    meshcat = StartMeshcat()
+
+    limits = [[0, 20], [0, 20]]
+    params = SetupParams(3, limits, 200, 1, 0)
+    diagram, plant = build_env(meshcat, params)
 
     diagram_context = diagram.CreateDefaultContext()
     plant_context = plant.GetMyContextFromRoot(diagram_context)
