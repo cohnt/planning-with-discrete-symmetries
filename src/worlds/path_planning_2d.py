@@ -210,6 +210,20 @@ def build_env(meshcat, params : SetupParams):
     edge_step_size = 0.01
     collision_checker = SceneGraphCollisionChecker(model=model, robot_model_instances=robot_model_instances, edge_step_size=edge_step_size)
 
+    rot = np.array([
+        [-1, 0, 0],
+        [0, 0, -1],
+        [0, -1, 0]
+    ])
+    # print(np.linalg.det(rot))
+    trans = np.array([0, 0, 1])
+    tf = RigidTransform(RotationMatrix(rot), trans)
+
+    meshcat.Set2dRenderMode(X_WC=tf, xmin=params.limits[0][0], xmax=params.limits[0][1], ymin=params.limits[1][0], ymax=params.limits[1][1])
+    meshcat.SetProperty("/Lights/PointLightNegativeX", "visible", False)
+    meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
+    meshcat.SetProperty("/Lights/FillLight", "visible", False)
+
     return diagram, collision_checker
 
 if __name__ == "__main__":
@@ -221,20 +235,6 @@ if __name__ == "__main__":
 
     diagram_context = diagram.CreateDefaultContext()
     plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
-
-    rot = np.array([
-        [-1, 0, 0],
-        [0, 0, -1],
-        [0, -1, 0]
-    ])
-    # print(np.linalg.det(rot))
-    trans = np.array([0, 0, 1])
-    tf = RigidTransform(RotationMatrix(rot), trans)
-
-    meshcat.Set2dRenderMode(X_WC=tf, xmin=limits[0][0], xmax=limits[0][1], ymin=limits[1][0], ymax=limits[1][1])
-    meshcat.SetProperty("/Lights/PointLightNegativeX", "visible", False)
-    meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
-    meshcat.SetProperty("/Lights/FillLight", "visible", False)
 
     diagram.plant().SetPositions(plant_context, [10, 10, 0])
     diagram.ForcedPublish(diagram_context)
