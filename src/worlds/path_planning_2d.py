@@ -23,7 +23,9 @@ from pydrake.all import (
     RigidTransform,
     RollPitchYaw,
     RotationMatrix,
-    AddDefaultVisualization
+    AddDefaultVisualization,
+    RobotDiagramBuilder,
+    SceneGraphCollisionChecker
 )
 
 @dataclass
@@ -178,31 +180,47 @@ def build_env(meshcat, params : SetupParams):
                                      seed=params.seed,
                                      add_limits_as_obstacles=False)
 
+    builder = RobotDiagramBuilder(0)
+    builder.parser().package_map().Add("symmetries", repo_dir())
+
     directives_str = add_obstacles_to_directives(directives_str, tris, "models/dynamically_generated")
-
-    builder = DiagramBuilder()
-    plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
-
-    parser = Parser(plant)
-    parser.package_map().Add("symmetries", repo_dir())
     directives = LoadModelDirectivesFromString(directives_str)
-    models = ProcessModelDirectives(directives, plant, parser)
-    plant.Finalize()
+    ProcessModelDirectives(directives, builder.plant(), builder.parser())
 
-    AddDefaultVisualization(builder, meshcat)
+    # AddDefaultVisualization(builder.builder(), meshcat)
+    meshcat_visual_params = MeshcatVisualizerParams()
+    meshcat_visual_params.delete_on_initialization_event = False
+    meshcat_visual_params.role = Role.kIllustration
+    meshcat_visual_params.prefix = "visual"
+    meshcat_visual_params.visible_by_default = True
+    meshcat_visual = MeshcatVisualizer.AddToBuilder(
+        builder.builder(), builder.scene_graph(), meshcat, meshcat_visual_params)
+    meshcat_collision_params = MeshcatVisualizerParams()
+    meshcat_collision_params.delete_on_initialization_event = False
+    meshcat_collision_params.role = Role.kProximity
+    meshcat_collision_params.prefix = "collision"
+    meshcat_collision_params.visible_by_default = False
+    meshcat_collision = MeshcatVisualizer.AddToBuilder(
+        builder.builder(), builder.scene_graph(), meshcat, meshcat_collision_params)
+
     diagram = builder.Build()
 
-    return diagram, plant
+    model = diagram
+    robot_model_instances = [diagram.plant().GetModelInstanceByName("robot")]
+    edge_step_size = 0.01
+    collision_checker = SceneGraphCollisionChecker(model=model, robot_model_instances=robot_model_instances, edge_step_size=edge_step_size)
+
+    return diagram, collision_checker
 
 if __name__ == "__main__":
     meshcat = StartMeshcat()
 
     limits = [[0, 20], [0, 20]]
     params = SetupParams(3, limits, 200, 1, 0)
-    diagram, plant = build_env(meshcat, params)
+    diagram, collision_checker = build_env(meshcat, params)
 
     diagram_context = diagram.CreateDefaultContext()
-    plant_context = plant.GetMyContextFromRoot(diagram_context)
+    plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 
     rot = np.array([
         [-1, 0, 0],
@@ -218,12 +236,12 @@ if __name__ == "__main__":
     meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
     meshcat.SetProperty("/Lights/FillLight", "visible", False)
 
-    plant.SetPositions(plant_context, [10, 10, 0])
+    diagram.plant().SetPositions(plant_context, [10, 10, 0])
     diagram.ForcedPublish(diagram_context)
     time.sleep(5)
 
     while True:
         for i in range(100):
-            plant.SetPositions(plant_context, [i / 100. * 20, i / 100. * 10, i / 100. * 2 * np.pi])
+            diagram.plant().SetPositions(plant_context, [i / 100. * 20, i / 100. * 10, i / 100. * 2 * np.pi])
             diagram.ForcedPublish(diagram_context)
             time.sleep(0.1)
