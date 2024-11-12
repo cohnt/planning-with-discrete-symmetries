@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 
+import time
 import numpy as np
 
 import src.planners.imacs as imacs
@@ -26,3 +27,14 @@ options = prm.PRMOptions()
 roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 
 roadmap.build()
+
+q = roadmap.nodes[0]
+
+diagram_context = diagram.CreateDefaultContext()
+plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
+
+while True:
+    for q in roadmap.nodes:
+        diagram.plant().SetPositions(plant_context, q)
+        diagram.ForcedPublish(diagram_context)
+        time.sleep(1)
