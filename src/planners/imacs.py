@@ -74,7 +74,7 @@ class SO2Interpolate(Interpolate):
 			if q2[self.symmetry_dof_start] > q1[self.symmetry_dof_start]:
 				return t * q2 + (1 - t) * (q1 + vec)
 			else:
-				return t * (q2 + vec) * (1 - t) * q1
+				return t * (q2 + vec) + (1 - t) * q1
 
 class SampleUniform():
 	def __init__(self, G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper):
