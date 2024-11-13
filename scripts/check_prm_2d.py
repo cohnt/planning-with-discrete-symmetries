@@ -28,15 +28,16 @@ Interpolator = imacs.SO2Interpolate(G, 3, 2)
 options = prm.PRMOptions(max_vertices=5e2)
 roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 
+np.random.seed(0)
 roadmap.build()
 
 diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 
-i = 0
-q = roadmap.graph.nodes[i]["q"]
-diagram.plant().SetPositions(plant_context, q)
-diagram.ForcedPublish(diagram_context)
+# i = 0
+# q = roadmap.graph.nodes[i]["q"]
+# diagram.plant().SetPositions(plant_context, q)
+# diagram.ForcedPublish(diagram_context)
 
 # # Visualize a random walk
 # while True:
@@ -68,13 +69,31 @@ path = roadmap.plan(q0, q1)
 
 assert len(path) % 2 == 0
 pairs = [(path[2*i], path[2*i+1]) for i in range(len(path) // 2)]
-t_scaling = 1
+
+for pair in pairs:
+    qs = [roadmap.Interpolator(pair[0], pair[1], t) for t in np.linspace(0, 1, 20)]
+    for qi in qs:
+        diagram.plant().SetPositions(plant_context, qi)
+        diagram.ForcedPublish(diagram_context)
+        time.sleep(0.025)
+
+for i in range(len(pairs)):
+    q0, q1 = pairs[i]
+    if np.abs(q1[2] - q0[2]) > np.pi:
+        if q1[2] > q0[2]:
+            q0[2] += 2 * np.pi
+        else:
+            q0[2] -= 2 * np.pi
+        pairs[i] = (q0, q1)
+
+print("SE(2)/G Path length:", np.sum([Metric(pair[0], pair[1])[0] for pair in pairs]))
+t_scaling = 1/4
 times = [t_scaling * np.linalg.norm(pair[1] - pair[0]) for pair in pairs]
 segments = [PiecewisePolynomial.FirstOrderHold([0, t], np.array(pair).T) for pair, t in zip(pairs, times)]
 traj = CompositeTrajectory.AlignAndConcatenate(segments)
-
+ 
 while True:
-    for t in np.linspace(traj.start_time(), traj.end_time(), 100):
+    for t in np.linspace(traj.start_time(), traj.end_time(), 400):
         diagram.plant().SetPositions(plant_context, traj.value(t).flatten())
         diagram.ForcedPublish(diagram_context)
-        time.sleep(0.1)
+        time.sleep(0.025)
