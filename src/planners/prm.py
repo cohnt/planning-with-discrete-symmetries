@@ -40,7 +40,7 @@ class PRM:
         for i in range(len(nodes)):
             self.graph.add_node(i, q=nodes[i])
 
-        # Compute pairwise distances.
+        # Compute pairwise distances. TODO: factor out?
         dist_mat = np.zeros((len(nodes), len(nodes)))
         targets = np.zeros((len(nodes), len(nodes), self.Sampler.ambient_dim))
         total = int(len(nodes) * (len(nodes) - 1) / 2)
@@ -89,50 +89,31 @@ class PRM:
             [len(c) for c in sorted(nx.connected_components(self.graph.to_undirected()), key=len, reverse=True)][:count])
         )
 
-    # def plan(self, start, goal, options=None):
-    #     if options is not None:
-    #         self.options = options
+    def plan(self, start, goal):
+        # Try to connect the start and goal
+        for q_new in [start, goal]:
+            nearest_idx_sorted, qis = self._order_neighbors(q_new)
+            q_new_idx = len(self.graph)
+            self.graph.add_node(q_new_idx, q=q_new)
+            for i in range(len(nearest_idx_sorted)):
+                self._maybe_connect(q_new_idx, nearest_idx_sorted[i], qis[i])
 
-    #     # Check if start and goal are already in the graph
-    #     start_idx = -1
-    #     goal_idx = -1
-    #     for i in range(len(self.graph)):
-    #         if np.linalg.norm(start - self.graph.nodes[i]["q"]) < self.options.check_size:
-    #             start_idx = i
-    #         if np.linalg.norm(goal - self.graph.nodes[i]["q"]) < self.options.check_size:
-    #             goal_idx = i
+        # Plan
+        start_idx = len(self.graph) - 2
+        goal_idx = len(self.graph) - 1
+        return self._path(start_idx, goal_idx)
 
-    #     if start_idx != -1 and goal_idx != -1:
-    #         # We already have the start and goal in the graph!
-    #         return self._path(start_idx, goal_idx)
-
-    #     # Try to connect the start and goal
-    #     for q_new in [start, goal]:
-    #         nearest_idx_sorted = self._order_neighbors(q_new)
-    #         q_new_idx = len(self.graph)
-    #         self.graph.add_node(q_new_idx, q=q_new)
-    #         for idx in nearest_idx_sorted:
-    #             self._maybe_connect(q_new_idx, idx)
-
-    #     # Plan
-    #     start_idx = len(self.graph) - 2
-    #     goal_idx = len(self.graph) - 1
-    #     return self._path(start_idx, goal_idx)
-
-    # def _order_neighbors(self, q):
-    #     dists = np.array([self.Distance(q, self.graph.nodes[i]["q"])
-    #         for i in range(len(self.graph))])
-    #     if self.options.neighbor_mode == "radius":
-    #         num_within_radius = np.sum(dists <= self.options.neighbor_radius)
-    #         return np.argsort(dists)[:num_within_radius]
-    #     elif self.options.neighbor_mode == "k":
-    #         return np.argsort(dists)[:self.options.neighbor_k]
-    #     elif self.options.neighbor_mode == "min":
-    #         num_within_radius = np.sum(dists <= self.options.neighbor_radius)
-    #         return np.argsort(dists)[:min(self.options.neighbor_k, num_within_radius)]
-    #     elif self.options.neighbor_mode == "max":
-    #         num_within_radius = np.sum(dists <= self.options.neighbor_radius)
-    #         return np.argsort(dists)[:max(self.options.neighbor_k, num_within_radius)]
+    def _order_neighbors(self, q):
+        pairs = [self.Metric(q, self.graph.nodes[i]["q"])
+            for i in range(len(self.graph))]
+        dists = [foo for foo, _ in pairs]
+        qis = [bar for _, bar in pairs]
+        if self.options.neighbor_mode == "radius":
+            num_within_radius = np.sum(dists <= self.options.neighbor_radius)
+            idxs = np.argsort(dists)[:num_within_radius]
+        elif self.options.neighbor_mode == "k":
+            idxs = np.argsort(dists)[:self.options.neighbor_k]
+        return idxs, np.array(qis)[idxs]
 
     def _maybe_connect(self, i, j, qj, dist=None):
         q1 = self.graph.nodes[i]["q"]
@@ -144,10 +125,14 @@ class PRM:
             _, qi = self.Metric(self.graph.nodes[j]["q"], q1)
             self.graph.add_edge(j, i, weight=dist, qj=qi)
 
-    # def _path(self, i, j):
-    #     path_idx = nx.shortest_path(self.graph, source=i, target=j)
-    #     path = [self.graph.nodes[idx]["q"] for idx in path_idx]
-    #     return path
+    def _path(self, i, j):
+        path_idx = nx.shortest_path(self.graph, source=i, target=j)
+        path = []
+        for idx in range(len(path_idx) - 1):
+            i, j = path_idx[idx], path_idx[idx + 1]
+            path.append(self.graph.nodes[i]["q"])
+            path.append(self.graph[i][j]["qj"])
+        return path
 
     # def save(self, fname):
     #     nodes = [self.graph.nodes[i]["q"] for i in range(len(self.graph))]
