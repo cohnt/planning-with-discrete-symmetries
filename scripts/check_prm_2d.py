@@ -10,7 +10,9 @@ import src.symmetry as symmetry
 import src.worlds.path_planning_2d as path_planning_2d
 
 from pydrake.all import (
-    StartMeshcat
+    StartMeshcat,
+    PiecewisePolynomial,
+    CompositeTrajectory
 )
 
 meshcat = StartMeshcat()
@@ -64,7 +66,15 @@ assert CollisionChecker.CheckConfigCollisionFree(q1)
 
 path = roadmap.plan(q0, q1)
 
-for q in path:
-    diagram.plant().SetPositions(plant_context, q)
-    diagram.ForcedPublish(diagram_context)
-    time.sleep(1)
+assert len(path) % 2 == 0
+pairs = [(path[2*i], path[2*i+1]) for i in range(len(path) // 2)]
+t_scaling = 1
+times = [t_scaling * np.linalg.norm(pair[1] - pair[0]) for pair in pairs]
+segments = [PiecewisePolynomial.FirstOrderHold([0, t], np.array(pair).T) for pair, t in zip(pairs, times)]
+traj = CompositeTrajectory.AlignAndConcatenate(segments)
+
+while True:
+    for t in np.linspace(traj.start_time(), traj.end_time(), 100):
+        diagram.plant().SetPositions(plant_context, traj.value(t).flatten())
+        diagram.ForcedPublish(diagram_context)
+        time.sleep(0.1)
