@@ -106,7 +106,7 @@ class PRM:
     def _order_neighbors(self, q):
         pairs = [self.Metric(q, self.graph.nodes[i]["q"])
             for i in range(len(self.graph))]
-        dists = [foo for foo, _ in pairs]
+        dists = np.array([foo for foo, _ in pairs])
         qis = [bar for _, bar in pairs]
         if self.options.neighbor_mode == "radius":
             num_within_radius = np.sum(dists <= self.options.neighbor_radius)

@@ -15,6 +15,8 @@ from pydrake.all import (
     CompositeTrajectory
 )
 
+options = prm.PRMOptions(max_vertices=5e2, neighbor_k=12, neighbor_radius=5e0, neighbor_mode="radius")
+
 meshcat = StartMeshcat()
 
 limits = [[0, 20], [0, 20]]
@@ -25,7 +27,6 @@ G = symmetry.CyclicGroupSO2(3)
 Sampler = imacs.SO2SampleUniform(G, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
 Metric = imacs.SO2DistanceSq(G, 3, 2)
 Interpolator = imacs.SO2Interpolate(G, 3, 2)
-options = prm.PRMOptions(max_vertices=5e2)
 roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 
 np.random.seed(0)
@@ -79,16 +80,18 @@ for i in range(len(pairs)):
             q0[2] -= 2 * np.pi
         pairs[i] = (q0, q1)
 
-print("SE(2)/G Path length:", np.sum([Metric(pair[0], pair[1])[0] for pair in pairs]))
+print("SE(2)/G Path length:", np.sum([np.linalg.norm(pair[0] - pair[1]) for pair in pairs]))
 t_scaling = 1/4
-times = [t_scaling * np.linalg.norm(pair[1] - pair[0]) for pair in pairs]
+times = [t_scaling * np.sqrt(Metric(pair[0], pair[1])[0]) for pair in pairs]
 segments = [PiecewisePolynomial.FirstOrderHold([0, t], np.array(pair).T) for pair, t in zip(pairs, times)]
-traj = CompositeTrajectory.AlignAndConcatenate(segments)
+traj1 = CompositeTrajectory.AlignAndConcatenate(segments)
 
-for t in np.linspace(traj.start_time(), traj.end_time(), 400):
-    diagram.plant().SetPositions(plant_context, traj.value(t).flatten())
+dt = traj1.end_time() - traj1.start_time()
+dt /= 400
+for t in np.linspace(traj1.start_time(), traj1.end_time(), 400):
+    diagram.plant().SetPositions(plant_context, traj1.value(t).flatten())
     diagram.ForcedPublish(diagram_context)
-    time.sleep(0.025)
+    time.sleep(dt)
 
 # Now compare to the plan without symmetries
 
@@ -96,7 +99,6 @@ G = symmetry.CyclicGroupSO2(1)
 Sampler = imacs.SO2SampleUniform(G, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
 Metric = imacs.SO2DistanceSq(G, 3, 2)
 Interpolator = imacs.SO2Interpolate(G, 3, 2)
-options = prm.PRMOptions(max_vertices=5e2)
 roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 
 np.random.seed(0)
@@ -122,13 +124,27 @@ for i in range(len(pairs)):
             q0[2] -= 2 * np.pi
         pairs[i] = (q0, q1)
 
-print("SE(2) Path length:", np.sum([Metric(pair[0], pair[1])[0] for pair in pairs]))
+print("SE(2) Path length:", np.sum([np.linalg.norm(pair[0] - pair[1]) for pair in pairs]))
 t_scaling = 1/4
-times = [t_scaling * np.linalg.norm(pair[1] - pair[0]) for pair in pairs]
+times = [t_scaling * np.sqrt(Metric(pair[0], pair[1])[0]) for pair in pairs]
 segments = [PiecewisePolynomial.FirstOrderHold([0, t], np.array(pair).T) for pair, t in zip(pairs, times)]
-traj = CompositeTrajectory.AlignAndConcatenate(segments)
+traj2 = CompositeTrajectory.AlignAndConcatenate(segments)
 
-for t in np.linspace(traj.start_time(), traj.end_time(), 400):
-    diagram.plant().SetPositions(plant_context, traj.value(t).flatten())
+dt = traj1.end_time() - traj1.start_time()
+dt /= 400
+for t in np.linspace(traj2.start_time(), traj2.end_time(), 400):
+    diagram.plant().SetPositions(plant_context, traj2.value(t).flatten())
     diagram.ForcedPublish(diagram_context)
-    time.sleep(0.025)
+    time.sleep(dt)
+
+# Alternate visualizing each one
+
+while True:
+    for traj in [traj1, traj2]:
+        time.sleep(3)
+        dt = traj.end_time() - traj.start_time()
+        dt /= 400
+        for t in np.linspace(traj.start_time(), traj.end_time(), 400):
+            diagram.plant().SetPositions(plant_context, traj.value(t).flatten())
+            diagram.ForcedPublish(diagram_context)
+            time.sleep(dt)
