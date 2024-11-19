@@ -101,7 +101,16 @@ class PRM:
         # Plan
         start_idx = len(self.graph) - 2
         goal_idx = len(self.graph) - 1
-        return self._path(start_idx, goal_idx)
+        try:
+            path = self._path(start_idx, goal_idx)
+        except:
+            path = []
+
+        # Remove the last two nodes.
+        self.graph.remove_node(len(self.graph)-1)
+        self.graph.remove_node(len(self.graph)-1)
+
+        return path
 
     def _order_neighbors(self, q):
         pairs = [self.Metric(q, self.graph.nodes[i]["q"])
