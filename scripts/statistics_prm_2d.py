@@ -17,12 +17,15 @@ from pydrake.all import (
     CompositeTrajectory
 )
 
-options = prm.PRMOptions(max_vertices=5e2, neighbor_k=12, neighbor_radius=5e0, neighbor_mode="radius")
+obstacle_seed = 0
+planner_seed = 0
+
+options = prm.PRMOptions(max_vertices=1e3, neighbor_k=25, neighbor_radius=5e0, neighbor_mode="k")
 
 meshcat = StartMeshcat()
 
 limits = [[0, 20], [0, 20]]
-params = path_planning_2d.SetupParams(3, limits, 200, 1, 0)
+params = path_planning_2d.SetupParams(3, limits, 200, 1, obstacle_seed)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
 
 G1 = symmetry.CyclicGroupSO2(3)
@@ -31,7 +34,7 @@ Metric1 = imacs.SO2DistanceSq(G1, 3, 2)
 Interpolator1 = imacs.SO2Interpolate(G1, 3, 2)
 roadmap1 = prm.PRM(Sampler1, Metric1, Interpolator1, CollisionChecker, options)
 
-np.random.seed(0)
+np.random.seed(planner_seed)
 roadmap1.build()
 
 G2 = symmetry.CyclicGroupSO2(1)
@@ -40,7 +43,7 @@ Metric2 = imacs.SO2DistanceSq(G2, 3, 2)
 Interpolator2 = imacs.SO2Interpolate(G2, 3, 2)
 roadmap2 = prm.PRM(Sampler2, Metric2, Interpolator2, CollisionChecker, options)
 
-np.random.seed(0)
+np.random.seed(planner_seed)
 roadmap2.build()
 
 n_pairs = 100
@@ -74,8 +77,5 @@ print("Baseline success rate: %f" % (np.isfinite(path_lengths[:,1]).sum() / path
 mask = np.logical_and(*np.isfinite(path_lengths).T)
 path_lengths_to_compare = path_lengths[mask]
 relative_improvement = np.divide(path_lengths_to_compare[:,0], path_lengths_to_compare[:,1]) # New / Old
-
-import pdb
-pdb.set_trace()
 
 print("Relative path length of the symmetry-aware path compared to the baseline: mean %f, std %f, percentage that improved %f" % (relative_improvement.mean(), relative_improvement.std(), (relative_improvement < 1).sum() / len(relative_improvement)))
