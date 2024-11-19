@@ -91,12 +91,15 @@ class PRM:
 
     def plan(self, start, goal):
         # Try to connect the start and goal
+        connected = []
         for q_new in [start, goal]:
             nearest_idx_sorted, qis = self._order_neighbors(q_new)
             q_new_idx = len(self.graph)
             self.graph.add_node(q_new_idx, q=q_new)
+            connected_this = False
             for i in range(len(nearest_idx_sorted)):
-                self._maybe_connect(q_new_idx, nearest_idx_sorted[i], qis[i])
+                connected_this = connected_this or self._maybe_connect(q_new_idx, nearest_idx_sorted[i], qis[i])
+            connected.append(connected_this)
 
         # Plan
         start_idx = len(self.graph) - 2
@@ -104,6 +107,16 @@ class PRM:
         try:
             path = self._path(start_idx, goal_idx)
         except:
+            # if self.Sampler.G.order() > 1:
+            #     print("Symmetry")
+            # else:
+            #     print("Baseline")
+            # if not connected[0]:
+            #     print("Failed to connect start to the graph.")
+            # if not connected[1]:
+            #     print("Failed to connect goal to the graph.")
+            # if connected[0] and connected[1]:
+            #     print("Start and goal were only connected to distinct components of the graph.")
             path = []
 
         # Remove the last two nodes.
@@ -133,6 +146,9 @@ class PRM:
             self.graph.add_edge(i, j, weight=dist, qj=qj)
             _, qi = self.Metric(self.graph.nodes[j]["q"], q1)
             self.graph.add_edge(j, i, weight=dist, qj=qi)
+            return True
+        else:
+            return False
 
     def _path(self, i, j):
         path_idx = nx.shortest_path(self.graph, source=i, target=j)
