@@ -10,16 +10,16 @@ import src.symmetry
 import src.util
 
 from pydrake.all import (
-	StartMeshcat,
-	DiagramBuilder,
-	AddMultibodyPlantSceneGraph,
-	Parser,
-	LoadModelDirectivesFromString,
-	ProcessModelDirectives,
-	MeshcatVisualizerParams,
-	Role,
-	MeshcatVisualizer,
-	RotationMatrix,
+    StartMeshcat,
+    DiagramBuilder,
+    AddMultibodyPlantSceneGraph,
+    Parser,
+    LoadModelDirectivesFromString,
+    ProcessModelDirectives,
+    MeshcatVisualizerParams,
+    Role,
+    MeshcatVisualizer,
+    RotationMatrix,
 )
 
 directives_str = """directives:
@@ -45,7 +45,7 @@ plant.Finalize()
 # meshcat_visual_params.role = Role.kIllustration
 # meshcat_visual_params.prefix = "visual"
 # meshcat_visual = MeshcatVisualizer.AddToBuilder(
-# 	builder, scene_graph, meshcat, meshcat_visual_params)
+#   builder, scene_graph, meshcat, meshcat_visual_params)
 
 meshcat_collision_params = MeshcatVisualizerParams()
 meshcat_collision_params.delete_on_initialization_event = False
@@ -53,7 +53,7 @@ meshcat_collision_params.role = Role.kProximity
 meshcat_collision_params.prefix = "collision"
 meshcat_collision_params.visible_by_default = True
 meshcat_collision = MeshcatVisualizer.AddToBuilder(
-	builder, scene_graph, meshcat, meshcat_collision_params)
+    builder, scene_graph, meshcat, meshcat_collision_params)
 
 # meshcat_visual.Delete()
 meshcat_collision.Delete()
@@ -70,16 +70,16 @@ mat = special_ortho_group.rvs(3)
 tfs_so3 = G.orbit(mat)
 
 for tf_so3 in tfs_so3:
-	q = RotationMatrix(tf_so3).ToQuaternion().wxyz()
-	positions = np.hstack((q, np.zeros(3)))
-	plant.SetPositions(plant_context, positions)
+    q = RotationMatrix(tf_so3).ToQuaternion().wxyz()
+    positions = np.hstack((q, np.zeros(3)))
+    plant.SetPositions(plant_context, positions)
 
-	diagram.ForcedPublish(diagram_context)
+    diagram.ForcedPublish(diagram_context)
 
-	while meshcat.GetButtonClicks("Next") == num_clicks:
-		time.sleep(0.05)
+    while meshcat.GetButtonClicks("Next") == num_clicks:
+        time.sleep(0.05)
 
-	num_clicks += 1
+    num_clicks += 1
 
 meshcat.DeleteButton("Next")
 
