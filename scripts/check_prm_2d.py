@@ -80,6 +80,10 @@ for i in range(len(pairs)):
             q0[2] -= 2 * np.pi
         pairs[i] = (q0, q1)
 
+for pair in pairs:
+    # print(pair[0][2], pair[1][2])
+    assert np.abs(pair[0][2] - pair[1][2]) <= np.pi
+
 print("SE(2)/G Path length:", np.sum([np.linalg.norm(pair[0] - pair[1]) for pair in pairs]))
 t_scaling = 1/4
 times = [t_scaling * np.sqrt(Metric(pair[0], pair[1])[0]) for pair in pairs]
@@ -123,6 +127,10 @@ for i in range(len(pairs)):
         else:
             q0[2] -= 2 * np.pi
         pairs[i] = (q0, q1)
+
+for pair in pairs:
+    # print(pair[0][2], pair[1][2])
+    assert np.abs(pair[0][2] - pair[1][2]) <= np.pi
 
 print("SE(2) Path length:", np.sum([np.linalg.norm(pair[0] - pair[1]) for pair in pairs]))
 t_scaling = 1/4
