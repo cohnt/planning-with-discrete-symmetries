@@ -25,10 +25,10 @@ options = prm.PRMOptions(max_vertices=1e3, neighbor_k=25, neighbor_radius=5e0, n
 meshcat = StartMeshcat()
 
 limits = [[0, 20], [0, 20]]
-params = path_planning_2d.SetupParams(3, limits, 200, 1, obstacle_seed)
+params = path_planning_2d.SetupParams(5, limits, 200, 1, obstacle_seed)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
 
-G1 = symmetry.CyclicGroupSO2(3)
+G1 = symmetry.CyclicGroupSO2(5)
 Sampler1 = imacs.SO2SampleUniform(G1, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
 Metric1 = imacs.SO2DistanceSq(G1, 3, 2)
 Interpolator1 = imacs.SO2Interpolate(G1, 3, 2)
