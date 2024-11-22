@@ -20,7 +20,7 @@ from pydrake.all import (
 obstacle_seed = 0
 planner_seed = 0
 
-options = prm.PRMOptions(max_vertices=1e3, neighbor_k=25, neighbor_radius=5e0, neighbor_mode="k")
+options = prm.PRMOptions(max_vertices=5e2, neighbor_k=15, neighbor_radius=5e0, neighbor_mode="k")
 
 meshcat = StartMeshcat()
 
