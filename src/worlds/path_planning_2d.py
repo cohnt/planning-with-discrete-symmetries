@@ -151,11 +151,11 @@ def build_env(meshcat, params : SetupParams):
     if params.n_sides == 1:
         raise NotImplementedError # TODO
     elif params.n_sides == 2:
-        raise NotImplementedError # TODO
+        shape = "prisms/rectangular_prism_2d.sdf"
     elif params.n_sides == 3:
         shape = "prisms/triangular_prism_2d.sdf"
     elif params.n_sides == 4:
-        raise NotImplementedError # TODO
+        shape = "prisms/square_prism_2d.sdf"
     elif params.n_sides == 5:
         shape = "prisms/pentagonal_prism_2d.sdf"
     elif params.n_sides == 6:

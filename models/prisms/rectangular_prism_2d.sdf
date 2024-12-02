@@ -1,6 +1,6 @@
 <?xml version='1.0'?>
 <sdf version='1.4'>
-  <model name="octagon">
+  <model name="rectangle">
 
     <link name="base">
       <pose>0 0 0 0 0 0</pose>
@@ -64,7 +64,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://symmetries/models/prisms/octagonal_prism.obj</uri>
+            <uri>package://symmetries/models/prisms/rectangular_prism.obj</uri>
           </mesh>
         </geometry>
       </collision>
@@ -72,7 +72,7 @@
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>package://symmetries/models/prisms/octagonal_prism.obj</uri>
+            <uri>package://symmetries/models/prisms/rectangular_prism.obj</uri>
           </mesh>
         </geometry>
       </visual>
