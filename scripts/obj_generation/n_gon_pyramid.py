@@ -10,7 +10,7 @@ parser.add_argument("-f", "--fname", type=str, required=True)
 
 args = parser.parse_args()
 assert args.n > 2
-obj_name = "%d-gon_prism" % args.n
+obj_name = "%d-gon_pyramid" % args.n
 
 vertices = []
 faces = []
