@@ -38,7 +38,7 @@ for i in range(args.n):
     b1 += 1
     b2 += 1
 
-    faces.append((b1, b2, bc))
+    faces.append((b1, bc, b2))
     faces.append((b1, b2, tc))
 
 with open(args.fname, "w") as f:
