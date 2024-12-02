@@ -50,15 +50,15 @@ def make_triangle_obj_sdf(vertices, name, path):
 
     # Top and bottom
     faces.append((1, 3, 5))
-    faces.append((2, 4, 6))
+    faces.append((2, 6, 4)) # Reversed for outward-facing normal
 
     # Sides
     faces.append((1, 2, 3))
-    faces.append((2, 3, 4))
+    faces.append((2, 4, 3)) # Reversed for outward-facing normal
     faces.append((3, 4, 5))
-    faces.append((4, 5, 6))
+    faces.append((4, 6, 5)) # Reversed for outward-facing normal
     faces.append((5, 6, 1))
-    faces.append((6, 1, 2))
+    faces.append((6, 2, 1)) # Reversed for outward-facing normal
 
     with open(os.path.join(path, name) + ".obj", "w") as f:
         f.write("g %s\n" % name)
