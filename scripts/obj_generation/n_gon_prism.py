@@ -44,8 +44,8 @@ for i in range(args.n):
     b2 += 1
 
     faces.append((t1, t2, tc))
-    faces.append((b1, b2, bc))
-    faces.append((t1, t2, b1))
+    faces.append((b1, bc, b2))
+    faces.append((t1, b1, t2))
     faces.append((t2, b1, b2))
 
 with open(args.fname, "w") as f:
