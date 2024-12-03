@@ -100,6 +100,37 @@ class SO2SampleUniform(SampleUniform):
     def __call__(self, n):
         return np.random.uniform(low=self.limits_lower, high=self.limits_upper, size=(n, self.ambient_dim))
 
+def UnwrapToContinuousPath2d(G, path, symmetry_idx):
+    if len(path) == 0:
+        return []
+
+    new_path = [path[0][0], path[0][1]]
+    for start, end in path[1:]:
+        mat_old = theta_to_so2(new_path[-1][symmetry_idx])
+        mat_new = theta_to_so2(start[symmetry_idx])
+        
+        assert G.equivalent(mat_old, mat_new)
+        
+        orbited = G.orbit(mat_new)
+        dists = np.linalg.norm(orbited - mat_old, axis = (1, 2))
+        best_new = orbited[np.argmin(dists)]
+
+        # tf @ mat_new = best_new, and SO(2) means the inverse is the transpose
+        tf = best_new @ mat_new.T
+        theta_next = end[symmetry_idx]
+        mat_next = theta_to_so2(theta_next)
+        theta_next = so2_to_theta(tf @ mat_next)
+
+        new_path.append(end)
+        new_path[-1][symmetry_idx] = theta_next
+
+        if new_path[-1][symmetry_idx] >= new_path[-2][symmetry_idx] + np.pi:
+            new_path[-1][symmetry_idx] -= 2 * np.pi
+        if new_path[-1][symmetry_idx] <= new_path[-2][symmetry_idx] - np.pi:
+            new_path[-1][symmetry_idx] += 2 * np.pi
+
+    return new_path
+
 if __name__ == "__main__":
     G = src.symmetry.CyclicGroupSO2(3)
     D = SO2DistanceSq(G, 3, 2)

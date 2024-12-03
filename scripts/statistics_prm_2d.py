@@ -20,7 +20,7 @@ from pydrake.all import (
 obstacle_seed = 0
 planner_seed = 0
 
-options = prm.PRMOptions(max_vertices=5e2, neighbor_k=15, neighbor_radius=5e0, neighbor_mode="k")
+options = prm.PRMOptions(max_vertices=1e3, neighbor_k=25, neighbor_radius=5e0, neighbor_mode="k")
 
 meshcat = StartMeshcat()
 
@@ -59,22 +59,13 @@ for start, goal in tqdm(start_goal_pairs):
     path_lengths.append([])
     for roadmap in [roadmap1, roadmap2]:
         path = roadmap.plan(start, goal)
+        path = imacs.UnwrapToContinuousPath2d(roadmap.Sampler.G, path, roadmap.Sampler.symmetry_dof_start)
 
         if len(path) == 0:
             path_lengths[-1].append(np.inf)
             continue
 
-        # Compute path length
-        for i in range(len(path)):
-            q0, q1 = path[i]
-            if np.abs(q1[2] - q0[2]) > np.pi:
-                if q1[2] > q0[2]:
-                    q0[2] += 2 * np.pi
-                else:
-                    q0[2] -= 2 * np.pi
-                path[i] = (q0, q1)
-
-        path_lengths[-1].append(np.sum([np.linalg.norm(pair[0] - pair[1]) for pair in path]))
+        path_lengths[-1].append(np.sum([np.linalg.norm(path[i-1] - path[i]) for i in range(1, len(path))]))
 
 path_lengths = np.asarray(path_lengths)
 
