@@ -65,19 +65,16 @@ for start, goal in tqdm(start_goal_pairs):
             continue
 
         # Compute path length
-        assert len(path) % 2 == 0
-        pairs = [(path[2*i], path[2*i+1]) for i in range(len(path) // 2)]
-        
-        for i in range(len(pairs)):
-            q0, q1 = pairs[i]
+        for i in range(len(path)):
+            q0, q1 = path[i]
             if np.abs(q1[2] - q0[2]) > np.pi:
                 if q1[2] > q0[2]:
                     q0[2] += 2 * np.pi
                 else:
                     q0[2] -= 2 * np.pi
-                pairs[i] = (q0, q1)
+                path[i] = (q0, q1)
 
-        path_lengths[-1].append(np.sum([np.linalg.norm(pair[0] - pair[1]) for pair in pairs]))
+        path_lengths[-1].append(np.sum([np.linalg.norm(pair[0] - pair[1]) for pair in path]))
 
 path_lengths = np.asarray(path_lengths)
 

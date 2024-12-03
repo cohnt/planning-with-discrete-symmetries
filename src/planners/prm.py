@@ -155,8 +155,8 @@ class PRM:
         path = []
         for idx in range(len(path_idx) - 1):
             i, j = path_idx[idx], path_idx[idx + 1]
-            path.append(self.graph.nodes[i]["q"])
-            path.append(self.graph[i][j]["qj"])
+            path.append((self.graph.nodes[i]["q"],
+                         self.graph[i][j]["qj"]))
         return path
 
     # def save(self, fname):
