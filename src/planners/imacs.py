@@ -36,6 +36,14 @@ class DistanceSq():
         # q2, and the value the distance_sq was actually computed for
         pass
 
+    def pairwise(self, q1s, q2s=None):
+        # If q2s is None, compute pairwise distances within q1s
+        # Should return a pair, whose first entry is the pairwise distances, in
+        # the form of a matrix of shape (len(q1s), len(q2s)), and the second
+        # entry is the closest elements, as a matrix of shape
+        # (len(q1s), len(q2s), dim)
+        pass
+
 class SO2DistanceSq(DistanceSq):
     def __call__(self, q1, q2):
         assert len(q1) == self.ambient_dim
@@ -51,6 +59,62 @@ class SO2DistanceSq(DistanceSq):
         q_out = q2.copy()
         q_out[self.symmetry_dof_start] = so2_to_theta(m2_prime[idx])
         return total_distance_sq, q_out
+
+    def pairwise(self, q1s, q2s=None):
+        if q2s is None:
+            q2s = q1s
+
+        np_q1s = np.asarray(q1s)
+        np_q2s = np.asarray(q2s)
+
+        # Euclidean components
+        remaining_q1s = np.delete(np_q1s, self.symmetry_dof_start, axis=1)
+        remaining_q2s = np.delete(np_q2s, self.symmetry_dof_start, axis=1)
+        remaining_dists_squared = (
+            np.sum(remaining_q1s**2, axis=1, keepdims=True)  # Shape (n, 1)
+            + np.sum(remaining_q2s**2, axis=1)              # Shape (m,)
+            - 2 * np.dot(remaining_q1s, remaining_q2s.T)    # Shape (n, m)
+        )
+
+        # Symmetric components
+        thetas1 = np_q1s[:, self.symmetry_dof_start]
+        thetas2 = np_q2s[:, self.symmetry_dof_start]
+        mats1 = theta_to_so2(thetas1).T
+        mats2 = theta_to_so2(thetas2).T
+
+        orbits = np.array([self.G.orbit(mat2.T) for mat2 in mats2])  # Shape (m, orbit_len, 2, 2)
+        orbited_mats2 = orbits.reshape(-1, 2, 2)  # Flatten orbits for pairwise computation
+
+        # Compute pairwise distances.
+        products = np.einsum('ijk,mkl->imjl', mats1, orbited_mats2)  # Shape (n, m * orbit_len, 2, 2)
+        traces = np.trace(products, axis1=-2, axis2=-1)  # Shape (n, m * orbit_len)
+        distances = np.arccos(np.clip(traces / 2, -1.0, 1.0))  # Shape (n, m * orbit_len)
+
+        # Reshape distances to group by orbits
+        distances = distances.reshape(len(mats1), len(mats2), -1)  # Shape (n, m, orbit_len)
+
+        # Compute minimum distance
+        min_distances = np.min(distances, axis=2)  # Shape (n, m)
+        min_indices = np.argmin(distances, axis=2)  # Shape (n, m)
+
+        nearest_mats = np.zeros((len(q1s), len(q2s), 2, 2))
+        nearest_thetas = np.zeros((len(q1s), len(q2s)))
+
+        # Assuming orbits is of shape (len(q2s), N, 2, 2), and min_indices is of shape (len(q1s), len(q2s))
+        i_indices = np.arange(len(q1s))[:, None]  # Shape (len(q1s), 1)
+        j_indices = np.arange(len(q2s))  # Shape (len(q2s),)
+
+        # Use these indices to select from orbits
+        nearest_mats = orbits[j_indices[None, :], min_indices]  # Shape (len(q1s), len(q2s), 2, 2)
+
+        # Compute theta for each nearest matrix
+        nearest_thetas = np.arctan2(nearest_mats[:, :, 1, 0], nearest_mats[:, :, 0, 0])  # Shape (n, m)
+
+        # Assign theta values correctly
+        nearest_entries = np.tile(q2s, (len(q1s), 1, 1))
+        nearest_entries[:, :, self.symmetry_dof_start] = nearest_thetas
+
+        return self.symmetry_weight * min_distances ** 2 + remaining_dists_squared, nearest_entries
 
 class Interpolate():
     def __init__(self, G, ambient_dim, symmetry_dof_start):
@@ -136,7 +200,11 @@ if __name__ == "__main__":
     D = SO2DistanceSq(G, 3, 2)
     q1 = np.array([0, 0, 0])
     q2 = np.array([0, 0, 2 * np.pi / 3])
-    print(D(q1, q2))
+    # print(D(q1, q2))
+    # print(D.pairwise([q1, q2]))
+    q3 = np.array([1, 0, 2 * np.pi / 3])
+    print()
+    print(D.pairwise([q1, q2, q3]))
 
     I = SO2Interpolate(G, 3, 2)
     print()
@@ -150,7 +218,7 @@ if __name__ == "__main__":
     print(I(q1, q3, 0.5))
     print(I(q1, q3, 1))
 
-    S = SO2Sample(G, 3, 2, [-1, -1, 0], [1, 1, 0])
+    S = SO2SampleUniform(G, 3, 2, [-1, -1, 0], [1, 1, 0])
     print()
     print(S(1))
     print(S(5))

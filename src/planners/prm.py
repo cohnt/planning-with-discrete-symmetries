@@ -43,17 +43,9 @@ class PRM:
         # Compute pairwise distances. TODO: factor out?
         dist_mat = np.zeros((len(nodes), len(nodes)))
         targets = np.zeros((len(nodes), len(nodes), self.Sampler.ambient_dim))
-        total = int(len(nodes) * (len(nodes) - 1) / 2)
-        progress_bar = tqdm(total=total, desc="Computing Distances")
-        for i in range(0, len(nodes)):
-            for j in range(i + 1, len(nodes)):
-                dist_mat[i,j], targets[i,j] = self.Metric(nodes[i], nodes[j])
-                dist_mat[j,i] = dist_mat[i,j]
-                targets[j,i] = np.full(self.Sampler.ambient_dim, np.nan)
-                progress_bar.n += 1
-                progress_bar.refresh()
+
+        dist_mat, targets = self.Metric.pairwise(nodes)
         np.fill_diagonal(dist_mat, np.inf)
-        progress_bar.close()
 
         # Pick edges to check.
         edges_to_try = dict() # Keys will be tuples (i, j), values will be j_rep
