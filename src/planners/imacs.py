@@ -57,7 +57,7 @@ class SO2DistanceSq(DistanceSq):
         remaining_distance_sq = np.sum((np.delete(q1, [self.symmetry_dof_start]) - np.delete(q2, [self.symmetry_dof_start])) ** 2)
         total_distance_sq = self.symmetry_weight * symmetry_distance**2 + remaining_distance_sq
         q_out = q2.copy()
-        q_out[self.symmetry_dof_start] = so2_to_theta(m2_prime[idx])
+        q_out[self.symmetry_dof_start] = WrapTheta2d(self.G, q1[self.symmetry_dof_start], so2_to_theta(m2_prime[idx]))
         return total_distance_sq, q_out
 
     def pairwise(self, q1s, q2s=None):
@@ -109,6 +109,16 @@ class SO2DistanceSq(DistanceSq):
 
         # Compute theta for each nearest matrix
         nearest_thetas = np.arctan2(nearest_mats[:, :, 1, 0], nearest_mats[:, :, 0, 0])  # Shape (n, m)
+
+        # Wrap the thetas around if necessary
+        theta_step = 2 * np.pi / self.G.order()
+        theta_thresh = theta_step / 2
+        for i in range(len(q1s)):
+            for j in range(len(q2s)):
+                nearest_thetas[i,j] = WrapTheta2d(self.G, q1s[i][self.symmetry_dof_start], nearest_thetas[i,j])
+
+        # TODO: replace the above with modulus
+        # TODO: vectorize it with help from chatgpt
 
         # Assign theta values correctly
         nearest_entries = np.tile(q2s, (len(q1s), 1, 1))
@@ -164,12 +174,25 @@ class SO2SampleUniform(SampleUniform):
     def __call__(self, n):
         return np.random.uniform(low=self.limits_lower, high=self.limits_upper, size=(n, self.ambient_dim))
 
+# Given two values of theta and a given group, transform theta1 (via the group
+# action) such that the euclidean interpolation from theta0 to theta1 is the
+# geodesic interpolation on SO(2) / G.
+def WrapTheta2d(G, theta0, theta1):
+    theta_step = 2 * np.pi / G.order()
+    theta_thresh = theta_step / 2
+    while theta1 - theta0 > theta_thresh:
+        theta1 -= theta_step
+    while theta1 - theta0 < -theta_thresh:
+        theta1 += theta_step
+    return theta1
+
 def UnwrapToContinuousPath2d(G, path, symmetry_idx):
     if len(path) == 0:
         return []
 
-    new_path = [path[0][0], path[0][1]]
+    new_path = [path[0][0].copy(), path[0][1].copy()]
     for start, end in path[1:]:
+        dtheta_old = end[symmetry_idx] - start[symmetry_idx]
         mat_old = theta_to_so2(new_path[-1][symmetry_idx])
         mat_new = theta_to_so2(start[symmetry_idx])
         
@@ -185,13 +208,20 @@ def UnwrapToContinuousPath2d(G, path, symmetry_idx):
         mat_next = theta_to_so2(theta_next)
         theta_next = so2_to_theta(tf @ mat_next)
 
-        new_path.append(end)
+        new_path.append(end.copy())
         new_path[-1][symmetry_idx] = theta_next
+        new_path[-1][symmetry_idx] = WrapTheta2d(G, new_path[-2][symmetry_idx], new_path[-1][symmetry_idx])
 
-        if new_path[-1][symmetry_idx] >= new_path[-2][symmetry_idx] + np.pi:
-            new_path[-1][symmetry_idx] -= 2 * np.pi
-        if new_path[-1][symmetry_idx] <= new_path[-2][symmetry_idx] - np.pi:
-            new_path[-1][symmetry_idx] += 2 * np.pi
+        # while new_path[-1][symmetry_idx] >= new_path[-2][symmetry_idx] + (np.pi / G.order()):
+        #     new_path[-1][symmetry_idx] -= 2 * np.pi / G.order()
+        # while new_path[-1][symmetry_idx] <= new_path[-2][symmetry_idx] - (np.pi / G.order()):
+        #     new_path[-1][symmetry_idx] += 2 * np.pi / G.order()
+
+        dtheta_new = new_path[-1][symmetry_idx] - new_path[-2][symmetry_idx]
+        if np.abs(dtheta_new - dtheta_old) > 1e-5:
+            print(dtheta_old, dtheta_new)
+            import pdb
+            pdb.set_trace()
 
     return new_path
 
