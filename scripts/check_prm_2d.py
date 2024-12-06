@@ -32,6 +32,10 @@ roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 np.random.seed(0)
 roadmap.build()
 
+fname = "check_prm_2d_symmetric.pkl"
+roadmap.save(fname)
+roadmap = prm.PRM.load(fname, CollisionChecker)
+
 diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 
@@ -96,6 +100,10 @@ roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 
 np.random.seed(0)
 roadmap.build()
+
+fname = "check_prm_2d_baseline.pkl"
+roadmap.save(fname)
+roadmap = prm.PRM.load(fname, CollisionChecker)
 
 q0 = np.array([0.01, 0.01, 0])
 q1 = np.array([19.9, 19.9, np.pi])

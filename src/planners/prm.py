@@ -154,20 +154,22 @@ class PRM:
                          self.graph[i][j]["qj"]))
         return path
 
-    # def save(self, fname):
-    #     nodes = [self.graph.nodes[i]["q"] for i in range(len(self.graph))]
-    #     adj_mat = nx.adjacency_matrix(self.graph)
-    #     with open(repo_dir() + "/data/" + fname, "wb") as f:
-    #         pickle.dump((nodes, adj_mat), f)
-    #         f.close()
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["CollisionChecker"] = None
+        return state
 
-    # def load(self, fname):
-    #     with open(repo_dir() + "/data/" + fname, "rb") as f:
-    #         nodes, adj_mat = pickle.load(f)
-    #         self.graph = nx.Graph()
-    #         for i, node in enumerate(nodes):
-    #             self.graph.add_node(i, q=node)
-    #         i_list, j_list = adj_mat.nonzero()
-    #         for i, j in zip(i_list, j_list):
-    #             if i < j:
-    #                 self.graph.add_edge(i, j, weight=self.Distance(nodes[i], nodes[j]))
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.CollisionChecker = None
+
+    def save(self, fname):
+        with open(repo_dir() + "/data/" + fname, "wb") as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load(fname, CollisionChecker):
+        with open(repo_dir() + "/data/" + fname, "rb") as f:
+            roadmap = pickle.load(f)
+        roadmap.CollisionChecker = CollisionChecker
+        return roadmap
