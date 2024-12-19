@@ -114,16 +114,10 @@ class SO2DistanceSq(DistanceSq):
 
         # Compute theta for each nearest matrix
         nearest_thetas = np.arctan2(nearest_mats[:, :, 1, 0], nearest_mats[:, :, 0, 0])  # Shape (n, m)
+        nearest_thetas_old = nearest_thetas.copy()
 
         # Wrap the thetas around if necessary
-        theta_step = 2 * np.pi / self.G.order()
-        theta_thresh = theta_step / 2
-        for i in range(len(q1s)):
-            for j in range(len(q2s)):
-                nearest_thetas[i,j] = WrapTheta2d(self.G, q1s[i][self.symmetry_dof_start], nearest_thetas[i,j])
-
-        # TODO: replace the above with modulus
-        # TODO: vectorize it with help from chatgpt
+        nearest_thetas = WrapTheta2dVectorized(self.G, q1s[:,self.symmetry_dof_start], nearest_thetas_old)
 
         # Assign theta values correctly
         nearest_entries = np.tile(q2s, (len(q1s), 1, 1))
@@ -190,6 +184,23 @@ def WrapTheta2d(G, theta0, theta1):
     while theta1 - theta0 < -theta_thresh:
         theta1 += theta_step
     return theta1
+
+# Given a list of thetas theta0s and a 2d matrix of corresponding nearest entries
+# nearest_thetas, return nearest_thetas wrapped appropriately.
+def WrapTheta2dVectorized(G, theta0s, nearest_thetas):
+    theta_step = 2 * np.pi / G.order()
+    theta_thresh = theta_step / 2
+
+    # Compute the difference
+    diff = nearest_thetas - theta0s[:, np.newaxis]  # Shape: (len(q1s), len(nearest_thetas))
+
+    # Wrap the differences to the range [-theta_thresh, theta_thresh]
+    wrapped_diff = (diff + theta_thresh) % theta_step - theta_thresh
+
+    # Update nearest_thetas
+    nearest_thetas = theta0s[:, np.newaxis] + wrapped_diff
+
+    return nearest_thetas
 
 def UnwrapToContinuousPath2d(G, path, symmetry_idx):
     if len(path) == 0:
