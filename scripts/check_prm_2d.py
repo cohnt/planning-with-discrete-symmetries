@@ -77,7 +77,7 @@ for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
     assert np.abs(path[i-1][2] - path[i][2]) <= np.pi
 
-print("SE(2)/G Path length:", np.sum([np.linalg.norm(path[i-1] - path[i]) for i in range(1, len(path))]))
+print("SE(2)/G path length:", Metric.path_length(path))
 t_scaling = 1/4
 times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]
@@ -118,7 +118,7 @@ for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
     assert np.abs(path[i-1][2] - path[i][2]) <= np.pi
 
-print("SE(2) Path length:", np.sum([np.linalg.norm(path[i-1] - path[i]) for i in range(1, len(path))]))
+print("SE(2)/G path length:", Metric.path_length(path))
 t_scaling = 1/4
 times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]

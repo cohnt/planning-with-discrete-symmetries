@@ -44,6 +44,11 @@ class DistanceSq():
         # (len(q1s), len(q2s), dim)
         pass
 
+    def path_length(self, path):
+        # Path should already be unwrapped!
+        segment_lengths = [np.sqrt(self(path[i], path[i-1])[0]) for i in range(1, len(path))]
+        return np.sum(segment_lengths)
+
 class SO2DistanceSq(DistanceSq):
     def __call__(self, q1, q2):
         assert len(q1) == self.ambient_dim

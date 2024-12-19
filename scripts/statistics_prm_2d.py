@@ -65,7 +65,7 @@ for start, goal in tqdm(start_goal_pairs):
             path_lengths[-1].append(np.inf)
             continue
 
-        path_lengths[-1].append(np.sum([np.linalg.norm(path[i-1] - path[i]) for i in range(1, len(path))]))
+        path_lengths[-1].append(roadmap.Metric.path_length(path))
 
 path_lengths = np.asarray(path_lengths)
 
