@@ -117,16 +117,16 @@ class PRM:
 
     def _order_neighbors(self, q):
         # TODO: Vectorize
-        pairs = [self.Metric(q, self.graph.nodes[i]["q"])
-            for i in range(len(self.graph))]
-        dists = np.array([foo for foo, _ in pairs])
-        qis = [bar for _, bar in pairs]
+        all_qs = np.array([self.graph.nodes[i]["q"] for i in range(len(self.graph))])
+        dists, qis = self.Metric.pairwise(np.array([q]), all_qs)
+        dists = dists.reshape(-1)
+        qis = qis.reshape(-1, len(q))
         if self.options.neighbor_mode == "radius":
             num_within_radius = np.sum(dists <= self.options.neighbor_radius)
             idxs = np.argsort(dists)[:num_within_radius]
         elif self.options.neighbor_mode == "k":
             idxs = np.argsort(dists)[:self.options.neighbor_k]
-        return idxs, np.array(qis)[idxs]
+        return idxs, qis[idxs]
 
     def _maybe_connect(self, i, j, qj, dist=None):
         q1 = self.graph.nodes[i]["q"]
