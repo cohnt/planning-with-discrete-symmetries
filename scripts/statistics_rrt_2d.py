@@ -37,13 +37,13 @@ for n_sides in sides_to_try:
         Sampler1 = imacs.SO2SampleUniform(G1, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
         Metric1 = imacs.SO2DistanceSq(G1, 3, 2)
         Interpolator1 = imacs.SO2Interpolate(G1, 3, 2)
-        planner1 = rrt.RRT(Sampler1, Metric1, Interpolator1, CollisionChecker, options)
+        planner1 = rrt.BiRRT(Sampler1, Metric1, Interpolator1, CollisionChecker, options)
 
         G2 = symmetry.CyclicGroupSO2(1)
         Sampler2 = imacs.SO2SampleUniform(G2, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
         Metric2 = imacs.SO2DistanceSq(G2, 3, 2)
         Interpolator2 = imacs.SO2Interpolate(G2, 3, 2)
-        planner2 = rrt.RRT(Sampler2, Metric2, Interpolator2, CollisionChecker, options)
+        planner2 = rrt.BiRRT(Sampler2, Metric2, Interpolator2, CollisionChecker, options)
 
         start_goal_pairs = []
         while len(start_goal_pairs) < n_pairs_per_world:
@@ -59,7 +59,7 @@ for n_sides in sides_to_try:
                 path = planner.plan(start, goal)
                 path = imacs.UnwrapToContinuousPath2d(planner.Sampler.G, path, planner.Sampler.symmetry_dof_start)
 
-                node_counts[-1].append(len(planner.tree))
+                node_counts[-1].append(len(planner.tree_a) + len(planner.tree_b))
 
                 if len(path) == 0:
                     path_lengths[-1].append(np.inf)
