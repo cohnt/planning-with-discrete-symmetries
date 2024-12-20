@@ -14,6 +14,10 @@ class Shortcut:
         self.options = options
 
     def shortcut(self, path, verbose=False):
+        if len(path) == 0:
+            # Can't shortcut an empty path!
+            return path
+
         segment_lengths = [self.Metric(qi, qj)[0] for qi, qj in path]
         total_distance = np.sum(segment_lengths)
         weights = segment_lengths / total_distance
