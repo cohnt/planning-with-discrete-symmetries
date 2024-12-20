@@ -116,7 +116,6 @@ class PRM:
         return path
 
     def _order_neighbors(self, q):
-        # TODO: Vectorize
         all_qs = np.array([self.graph.nodes[i]["q"] for i in range(len(self.graph))])
         dists, qis = self.Metric.pairwise(np.array([q]), all_qs)
         dists = dists.reshape(-1)
