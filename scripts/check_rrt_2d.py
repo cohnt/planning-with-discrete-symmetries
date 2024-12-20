@@ -6,6 +6,7 @@ import numpy as np
 
 import src.planners.imacs as imacs
 import src.planners.rrt as rrt
+import src.planners.shortcut as shortcut
 import src.symmetry as symmetry
 import src.worlds.path_planning_2d as path_planning_2d
 
@@ -16,6 +17,7 @@ from pydrake.all import (
 )
 
 options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, goal_sample_frequency=0.05)
+shortcut_options = shortcut.ShortcutOptions(max_iters=1e2)
 
 meshcat = StartMeshcat()
 
@@ -28,6 +30,7 @@ Sampler = imacs.SO2SampleUniform(G, 3, 2, [limits[0][0], limits[1][0], 0], [limi
 Metric = imacs.SO2DistanceSq(G, 3, 2)
 Interpolator = imacs.SO2Interpolate(G, 3, 2)
 planner = rrt.BiRRT(Sampler, Metric, Interpolator, CollisionChecker, options)
+shortcutter = shortcut.Shortcut(Metric, Interpolator, CollisionChecker, shortcut_options)
 
 diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
@@ -41,6 +44,7 @@ assert CollisionChecker.CheckConfigCollisionFree(q1)
 
 np.random.seed(0)
 path = planner.plan(q0, q1, verbose=True)
+path = shortcutter.shortcut(path, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
 for i in range(1, len(path)):
@@ -67,6 +71,7 @@ Sampler = imacs.SO2SampleUniform(G, 3, 2, [limits[0][0], limits[1][0], 0], [limi
 Metric = imacs.SO2DistanceSq(G, 3, 2)
 Interpolator = imacs.SO2Interpolate(G, 3, 2)
 planner = rrt.BiRRT(Sampler, Metric, Interpolator, CollisionChecker, options)
+shortcutter = shortcut.Shortcut(Metric, Interpolator, CollisionChecker, shortcut_options)
 
 q0 = np.array([0.01, 0.01, 0])
 q1 = np.array([19.9, 19.9, np.pi])
@@ -76,6 +81,7 @@ assert CollisionChecker.CheckConfigCollisionFree(q1)
 
 np.random.seed(0)
 path = planner.plan(q0, q1, verbose=True)
+path = shortcutter.shortcut(path, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
 for i in range(1, len(path)):
