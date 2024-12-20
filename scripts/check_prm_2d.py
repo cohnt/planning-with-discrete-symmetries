@@ -20,7 +20,7 @@ options = prm.PRMOptions(max_vertices=5e2, neighbor_k=12, neighbor_radius=5e0, n
 meshcat = StartMeshcat()
 
 limits = [[0, 20], [0, 20]]
-params = path_planning_2d.SetupParams(3, limits, 200, 1, 0)
+params = path_planning_2d.SetupParams(3, limits, 200, 1.25, 0)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
 
 G = symmetry.CyclicGroupSO2(3)

@@ -12,7 +12,7 @@ meshcat = StartMeshcat()
 limits = [[0, 20], [0, 20]]
 
 for seed in range(10):
-    params = path_planning_2d.SetupParams(3, limits, 200, 1, seed)
+    params = path_planning_2d.SetupParams(3, limits, 200, 1.25, seed)
     diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
 
     diagram_context = diagram.CreateDefaultContext()

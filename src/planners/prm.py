@@ -3,8 +3,6 @@ import networkx as nx
 from tqdm.auto import tqdm
 from src.util import repo_dir
 import pickle
-from sklearn.neighbors import kneighbors_graph, radius_neighbors_graph
-import time
 
 class PRMOptions:
     def __init__(self, neighbor_radius=1e-1, neighbor_k=12, neighbor_mode="k",
@@ -118,6 +116,7 @@ class PRM:
         return path
 
     def _order_neighbors(self, q):
+        # TODO: Vectorize
         pairs = [self.Metric(q, self.graph.nodes[i]["q"])
             for i in range(len(self.graph))]
         dists = np.array([foo for foo, _ in pairs])

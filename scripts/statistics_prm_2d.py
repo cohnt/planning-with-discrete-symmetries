@@ -29,7 +29,7 @@ for n_sides in sides_to_try:
     path_lengths = []
     for obstacle_seed in range(n_worlds):
         limits = [[0, 20], [0, 20]]
-        params = path_planning_2d.SetupParams(n_sides, limits, 200, 1, obstacle_seed)
+        params = path_planning_2d.SetupParams(n_sides, limits, 200, 1.25, obstacle_seed)
         diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
 
         G1 = symmetry.CyclicGroupSO2(n_sides)
