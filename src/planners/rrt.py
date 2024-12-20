@@ -25,15 +25,15 @@ class RRT:
         self.CollisionChecker = CollisionChecker
         self.options = options
 
-    def plan(self, start, goal):
+    def plan(self, start, goal, verbose=False):
         t0 = time.time()
 
         self.tree = nx.DiGraph()
         self.tree.add_node(0, q=start)
         success = False
 
-        iters = tqdm(total=self.options.max_iters, position=0, desc="Iterations")
-        vertices = tqdm(total=self.options.max_vertices, position=1, desc="Vertices")
+        iters = tqdm(total=self.options.max_iters, position=0, desc="Iterations", disable=not verbose)
+        vertices = tqdm(total=self.options.max_vertices, position=1, desc="Vertices", disable=not verbose)
         for i in range(self.options.max_iters):
             if time.time() - t0 > self.options.timeout:
                 break

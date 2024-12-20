@@ -17,9 +17,9 @@ from pydrake.all import (
     CompositeTrajectory
 )
 
-sides_to_try = [3, 5, 8]
-n_worlds = 10
-n_pairs_per_world = 100
+sides_to_try = [3]
+n_worlds = 5
+n_pairs_per_world = 30
 
 meshcat = StartMeshcat()
 options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, goal_sample_frequency=0.05)
@@ -51,7 +51,7 @@ for n_sides in sides_to_try:
             if CollisionChecker.CheckConfigCollisionFree(q0) and CollisionChecker.CheckConfigCollisionFree(q1):
                 start_goal_pairs.append((q0, q1))
 
-        for start, goal in start_goal_pairs:
+        for start, goal in tqdm(start_goal_pairs):
             path_lengths.append([])
             node_counts.append([])
             for planner in [planner1, planner2]:

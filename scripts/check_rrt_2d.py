@@ -40,7 +40,7 @@ assert CollisionChecker.CheckConfigCollisionFree(q0)
 assert CollisionChecker.CheckConfigCollisionFree(q1)
 
 np.random.seed(0)
-path = planner.plan(q0, q1)
+path = planner.plan(q0, q1, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
 for i in range(1, len(path)):
@@ -75,7 +75,7 @@ assert CollisionChecker.CheckConfigCollisionFree(q0)
 assert CollisionChecker.CheckConfigCollisionFree(q1)
 
 np.random.seed(0)
-path = planner.plan(q0, q1)
+path = planner.plan(q0, q1, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
 for i in range(1, len(path)):
