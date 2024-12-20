@@ -30,21 +30,22 @@ class Shortcut:
             dist, q2_local = self.Metric(q1, q2)
 
             if self.CollisionChecker.CheckEdgeCollisionFreeParallel(q1, q2_local):
+                total_distance -= np.sum(segment_lengths[start:stop+1])
+
                 path[start] = (path[start][0], q1)
                 path[stop] = (q2, path[stop][1])
-                del path[start+1:stop]
-                path.insert(start+1, (q1, q2_local))
-
-                # total_distance -= np.sum(segment_lengths[start:stop+1])
-
                 segment_lengths[start] = self.Metric(path[start][0], path[start][1])[0]
-                segment_lengths[start+2] = self.Metric(path[start+2][0], path[start+2][1])[0]
+                segment_lengths[stop] = self.Metric(path[stop][0], path[stop][1])[0]
+
+                del path[start+1:stop]
                 del segment_lengths[start+1:stop]
+
+                path.insert(start+1, (q1, q2_local))
                 segment_lengths.insert(start+1, dist)
 
-                # total_distance += np.sum(segment_lengths[start:start+3])
+                total_distance += np.sum(segment_lengths[start:start+3])
 
-                total_distance = np.sum(segment_lengths)
+                # total_distance = np.sum(segment_lengths)
                 weights = segment_lengths / total_distance
                 total_shortcuts += 1
 
