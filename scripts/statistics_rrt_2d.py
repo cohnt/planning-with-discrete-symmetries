@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 import src.planners.imacs as imacs
 import src.planners.rrt as rrt
+import src.planners.shortcut as shortcut
 import src.symmetry as symmetry
 import src.worlds.path_planning_2d as path_planning_2d
 
@@ -23,6 +24,7 @@ n_pairs_per_world = 30
 
 meshcat = StartMeshcat()
 options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, goal_sample_frequency=0.05)
+shortcut_options = shortcut.ShortcutOptions(max_iters=1e2)
 
 for n_sides in sides_to_try:
     print("Running comparison for an %d-gon across %d worlds, with %d plans per world" % (n_sides, n_worlds, n_pairs_per_world))
@@ -38,12 +40,14 @@ for n_sides in sides_to_try:
         Metric1 = imacs.SO2DistanceSq(G1, 3, 2)
         Interpolator1 = imacs.SO2Interpolate(G1, 3, 2)
         planner1 = rrt.BiRRT(Sampler1, Metric1, Interpolator1, CollisionChecker, options)
+        shortcutter1 = shortcut.Shortcut(Metric1, Interpolator1, CollisionChecker, shortcut_options)
 
         G2 = symmetry.CyclicGroupSO2(1)
         Sampler2 = imacs.SO2SampleUniform(G2, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
         Metric2 = imacs.SO2DistanceSq(G2, 3, 2)
         Interpolator2 = imacs.SO2Interpolate(G2, 3, 2)
         planner2 = rrt.BiRRT(Sampler2, Metric2, Interpolator2, CollisionChecker, options)
+        shortcutter2 = shortcut.Shortcut(Metric2, Interpolator2, CollisionChecker, shortcut_options)
 
         start_goal_pairs = []
         while len(start_goal_pairs) < n_pairs_per_world:
@@ -54,9 +58,10 @@ for n_sides in sides_to_try:
         for start, goal in tqdm(start_goal_pairs):
             path_lengths.append([])
             node_counts.append([])
-            for planner in [planner1, planner2]:
+            for planner, shortcutter in zip([planner1, planner2], [shortcutter1, shortcutter2]):
                 np.random.seed(0)
                 path = planner.plan(start, goal)
+                path = shortcutter.shortcut(path)
                 path = imacs.UnwrapToContinuousPath2d(planner.Sampler.G, path, planner.Sampler.symmetry_dof_start)
 
                 node_counts[-1].append(len(planner.tree_a) + len(planner.tree_b))
