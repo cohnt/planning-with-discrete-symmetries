@@ -160,6 +160,8 @@ def build_env(meshcat, params : SetupParams):
         shape = "prisms/pentagonal_prism_2d.sdf"
     elif params.n_sides == 6:
         shape = "prisms/hexagonal_prism_2d.sdf"
+    elif params.n_sides == 7:
+        shape = "prisms/heptagonal_prism_2d.sdf"
     elif params.n_sides == 8:
         shape = "prisms/octagonal_prism_2d.sdf"
     else:
