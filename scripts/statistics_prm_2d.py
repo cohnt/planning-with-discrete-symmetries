@@ -2,6 +2,7 @@ import sys
 sys.path.append("..")
 
 import time
+import copy
 import numpy as np
 
 from tqdm import tqdm
@@ -21,11 +22,33 @@ sides_to_try = [3, 5, 8]
 n_worlds = 10
 n_pairs_per_world = 100
 
+# KNN statistics equal samples
+# equal_sampling = True
+# options_symmetry = prm.PRMOptions(max_vertices=1e3, neighbor_k=15, neighbor_mode="k")
+# options_baseline = options_symmetry
+
+# RNN statistics equal samples
+equal_sampling = True
+options_symmetry = prm.PRMOptions(max_vertices=1e3, neighbor_radius=3e0, neighbor_mode="radius")
+options_baseline = options_symmetry
+
+# KNN statistics unequal samples
+# equal_sampling = False
+# options_symmetry = prm.PRMOptions(max_vertices=1e3, neighbor_k=15, neighbor_mode="k")
+# options_baseline = None
+
+# RNN statistics unequal samples
+# equal_sampling = False
+# options_symmetry = prm.PRMOptions(max_vertices=1e3, neighbor_radius=1e0, neighbor_mode="radius")
+# options_baseline = None
+
 meshcat = StartMeshcat()
-options = prm.PRMOptions(max_vertices=1e3, neighbor_k=25, neighbor_radius=5e0, neighbor_mode="k")
 
 for n_sides in sides_to_try:
     print("Running comparison for an %d-gon across %d worlds, with %d plans per world" % (n_sides, n_worlds, n_pairs_per_world))
+    if not equal_sampling:
+        options_baseline = copy.copy(options_symmetry)
+        options_baseline.max_vertices *= n_sides
     path_lengths = []
     for obstacle_seed in range(n_worlds):
         limits = [[0, 20], [0, 20]]
@@ -36,7 +59,7 @@ for n_sides in sides_to_try:
         Sampler1 = imacs.SO2SampleUniform(G1, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
         Metric1 = imacs.SO2DistanceSq(G1, 3, 2)
         Interpolator1 = imacs.SO2Interpolate(G1, 3, 2)
-        roadmap1 = prm.PRM(Sampler1, Metric1, Interpolator1, CollisionChecker, options)
+        roadmap1 = prm.PRM(Sampler1, Metric1, Interpolator1, CollisionChecker, options_symmetry)
 
         np.random.seed(0)
         roadmap1.build()
@@ -45,7 +68,7 @@ for n_sides in sides_to_try:
         Sampler2 = imacs.SO2SampleUniform(G2, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
         Metric2 = imacs.SO2DistanceSq(G2, 3, 2)
         Interpolator2 = imacs.SO2Interpolate(G2, 3, 2)
-        roadmap2 = prm.PRM(Sampler2, Metric2, Interpolator2, CollisionChecker, options)
+        roadmap2 = prm.PRM(Sampler2, Metric2, Interpolator2, CollisionChecker, options_baseline)
 
         np.random.seed(0)
         roadmap2.build()
