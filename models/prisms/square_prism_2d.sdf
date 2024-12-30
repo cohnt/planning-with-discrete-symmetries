@@ -63,7 +63,7 @@
       <collision name='collision'>
         <geometry>
           <mesh>
-            <scale>1 1 1</scale>
+            <scale>1.22474487139 1.22474487139 1.22474487139</scale>
             <uri>package://symmetries/models/cube.obj</uri>
           </mesh>
         </geometry>
@@ -71,7 +71,7 @@
       <visual name='visual'>
         <geometry>
           <mesh>
-            <scale>1 1 1</scale>
+            <scale>1.22474487139 1.22474487139 1.22474487139</scale>
             <uri>package://symmetries/models/cube.obj</uri>
           </mesh>
         </geometry>

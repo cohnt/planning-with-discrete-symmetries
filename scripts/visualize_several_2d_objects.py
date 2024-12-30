@@ -11,7 +11,7 @@ meshcat = StartMeshcat()
 
 limits = [[0, 20], [0, 20]]
 
-for n_sides in [3, 5, 6, 8]:
+for n_sides in [2, 3, 4, 5, 6, 7, 8]:
     params = path_planning_2d.SetupParams(n_sides, limits, 200, 1, 0)
     diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
 
@@ -22,4 +22,4 @@ for n_sides in [3, 5, 6, 8]:
 
     diagram.plant().SetPositions(plant_context, q)
     diagram.ForcedPublish(diagram_context)
-    time.sleep(1)
+    time.sleep(0.01)
