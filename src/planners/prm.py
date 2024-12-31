@@ -21,11 +21,16 @@ class PRM:
         self.CollisionChecker = CollisionChecker
         self.options = options
 
-    def build(self):
+    def build(self, nodes_in=None):
         self.graph = nx.DiGraph()
 
+        if nodes_in is None:
+            nodes_in = np.zeros((0, self.Sampler.ambient_dim))
+        else:
+            assert nodes_in.shape[1] == self.Sampler.ambient_dim
+
         # Gather collision-free samples
-        nodes = np.zeros((0, self.Sampler.ambient_dim))
+        nodes = nodes_in.copy()
         progress_bar = tqdm(total=self.options.max_vertices, desc="Sampling Nodes")
         while len(nodes) < self.options.max_vertices:
             candidate_nodes = self.Sampler(self.options.max_vertices - len(nodes))
@@ -116,7 +121,7 @@ class PRM:
         return path
 
     def _order_neighbors(self, q):
-        all_qs = np.array([self.graph.nodes[i]["q"] for i in range(len(self.graph))])
+        all_qs = self.nodes()
         dists, qis = self.Metric.pairwise(np.array([q]), all_qs)
         dists = dists.reshape(-1)
         qis = qis.reshape(-1, len(q))
@@ -151,6 +156,10 @@ class PRM:
             path.append((self.graph.nodes[i]["q"],
                          self.graph[i][j]["qj"]))
         return path
+
+    def nodes(self):
+        all_qs = np.array([self.graph.nodes[i]["q"] for i in range(len(self.graph))])
+        return all_qs
 
     def __getstate__(self):
         state = self.__dict__.copy()
