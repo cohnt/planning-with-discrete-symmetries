@@ -73,6 +73,10 @@ class Expansiveness:
                 pairs.append((alpha1, beta1))
         return pairs
 
+    def plot_combined_pareto_curve(self, ax, color="black"):
+        pareto_points = pareto_front(self.get_all_alpha_beta_points())
+        self.plot_pareto_curve(pareto_points, ax, color)
+
     def plot_pareto_curve(self, pairs, ax, color="black"):
         alphas = []
         betas = []
@@ -95,6 +99,22 @@ def pareto_dominated(alpha_in, beta_in, frontier):
         if alpha_in <= alpha and beta_in <= beta:
             return True
     return False
+
+# Thanks ChatGPT!
+def pareto_front(points):
+    # Sort points by x-coordinate (ascending), breaking ties by y-coordinate
+    points = sorted(points, key=lambda p: (p[0], p[1]))
+
+    pareto_points = []
+    current_min_y = float('inf')  # Track the smallest y encountered
+
+    # Traverse sorted points
+    for x, y in points:
+        if y < current_min_y:  # This point is not dominated
+            pareto_points.append((x, y))
+            current_min_y = y  # Update the smallest y
+
+    return pareto_points
 
 if __name__ == "__main__":
     # Fully connected graph. Should be (1, 1)-expansive.

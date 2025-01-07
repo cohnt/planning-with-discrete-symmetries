@@ -50,11 +50,14 @@ fig, ax = plt.subplots()
 ax.set_xlim((0, 1))
 ax.set_ylim((0, 1))
 
-e1.plot_pareto_scatter(ax, "blue")
-e2.plot_pareto_scatter(ax, "red")
+# e1.plot_pareto_scatter(ax, "blue")
+# e2.plot_pareto_scatter(ax, "red")
 
-e1.plot_pareto_curves(ax, "blue")
-e2.plot_pareto_curves(ax, "red")
+# e1.plot_pareto_curves(ax, "blue")
+# e2.plot_pareto_curves(ax, "red")
+
+e1.plot_combined_pareto_curve(ax, "blue")
+e2.plot_combined_pareto_curve(ax, "red")
 
 import matplotlib.patches as mpatches
 blue_patch = mpatches.Patch(color='blue', label='Symmetry-Aware Planner')
