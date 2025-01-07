@@ -11,10 +11,10 @@ import src.worlds.path_planning_2d as path_planning_2d
 
 from pydrake.all import StartMeshcat
 
-options = prm.PRMOptions(max_vertices=100, neighbor_radius=np.inf, neighbor_mode="radius")
+options = prm.PRMOptions(max_vertices=300, neighbor_radius=np.inf, neighbor_mode="radius")
 
 meshcat = StartMeshcat()
-animate = True
+animate = False
 
 n = 3
 limits = [[0, 10], [0, 10]]
