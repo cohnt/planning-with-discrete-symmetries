@@ -11,9 +11,10 @@ import src.worlds.path_planning_2d as path_planning_2d
 
 from pydrake.all import StartMeshcat
 
-options = prm.PRMOptions(max_vertices=300, neighbor_radius=np.inf, neighbor_mode="radius")
+options = prm.PRMOptions(max_vertices=100, neighbor_radius=np.inf, neighbor_mode="radius")
 
 meshcat = StartMeshcat()
+animate = True
 
 n = 3
 limits = [[0, 10], [0, 10]]
@@ -42,26 +43,41 @@ roadmap2 = prm.PRM(Sampler2, Metric2, Interpolator2, CollisionChecker, options)
 np.random.seed(0)
 roadmap2.build()
 
-e1 = expansiveness.Expansiveness(roadmap1.graph)
-e2 = expansiveness.Expansiveness(roadmap2.graph)
-
 import matplotlib.pyplot as plt
-fig, ax = plt.subplots()
-ax.set_xlim((0, 1))
-ax.set_ylim((0, 1))
-
-# e1.plot_pareto_scatter(ax, "blue")
-# e2.plot_pareto_scatter(ax, "red")
-
-# e1.plot_pareto_curves(ax, "blue")
-# e2.plot_pareto_curves(ax, "red")
-
-e1.plot_combined_pareto_curve(ax, "blue")
-e2.plot_combined_pareto_curve(ax, "red")
-
 import matplotlib.patches as mpatches
-blue_patch = mpatches.Patch(color='blue', label='Symmetry-Aware Planner')
-red_patch = mpatches.Patch(color='red', label='Symmetry-Unaware Planner')
-plt.legend(handles=[blue_patch, red_patch])
+fig, ax = plt.subplots()
 
-plt.show()
+vals = range(options.max_vertices) if animate else [options.max_vertices]
+for i in vals:
+    plt.cla()
+
+    i = int(i)
+
+    e1 = expansiveness.Expansiveness(roadmap1.graph.subgraph(range(0, i)))
+    e2 = expansiveness.Expansiveness(roadmap2.graph.subgraph(range(0, i)))
+
+    ax.set_xlim((0, 1))
+    ax.set_ylim((0, 1))
+
+    # e1.plot_pareto_scatter(ax, "blue")
+    # e2.plot_pareto_scatter(ax, "red")
+
+    # e1.plot_pareto_curves(ax, "blue")
+    # e2.plot_pareto_curves(ax, "red")
+
+    e1.plot_combined_pareto_curve(ax, "blue")
+    e2.plot_combined_pareto_curve(ax, "red")
+
+    blue_patch = mpatches.Patch(color='blue', label='Symmetry-Aware Planner')
+    red_patch = mpatches.Patch(color='red', label='Symmetry-Unaware Planner')
+    plt.legend(handles=[blue_patch, red_patch])
+
+    plt.draw()
+    plt.pause(0.01)
+
+    if not animate:
+        plt.show()
+        break
+
+if animate:
+    plt.show()
