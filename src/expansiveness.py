@@ -73,19 +73,22 @@ class Expansiveness:
                 pairs.append((alpha1, beta1))
         return pairs
 
+    def plot_pareto_curve(self, pairs, ax, color="black"):
+        alphas = []
+        betas = []
+        for j in range(len(pairs)):
+            alpha1, beta1 = pairs[j]
+            if j > 0:
+                alpha0, beta0 = pairs[j-1]
+                alphas.append(min(alpha0, alpha1))
+                betas.append(min(beta0, beta1))
+            alphas.append(alpha1)
+            betas.append(beta1)
+        ax.plot(alphas, betas, c=color)
+
     def plot_pareto_curves(self, ax, color="black"):
-        for i in range(len(self.alpha_beta_pairs)):
-            alphas = []
-            betas = []
-            for j in range(len(self.alpha_beta_pairs[i])):
-                alpha1, beta1 = self.alpha_beta_pairs[i][j]
-                if j > 0:
-                    alpha0, beta0 = self.alpha_beta_pairs[i][j-1]
-                    alphas.append(min(alpha0, alpha1))
-                    betas.append(min(beta0, beta1))
-                alphas.append(alpha1)
-                betas.append(beta1)
-            ax.plot(alphas, betas, c=color)
+        for pairs in self.alpha_beta_pairs:
+            self.plot_pareto_curve(pairs, ax, color)
 
 def pareto_dominated(alpha_in, beta_in, frontier):
     for alpha, beta in frontier:

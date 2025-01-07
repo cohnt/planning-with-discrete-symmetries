@@ -53,6 +53,9 @@ ax.set_ylim((0, 1))
 e1.plot_pareto_scatter(ax, "blue")
 e2.plot_pareto_scatter(ax, "red")
 
+e1.plot_pareto_curves(ax, "blue")
+e2.plot_pareto_curves(ax, "red")
+
 import matplotlib.patches as mpatches
 blue_patch = mpatches.Patch(color='blue', label='Symmetry-Aware Planner')
 red_patch = mpatches.Patch(color='red', label='Symmetry-Unaware Planner')
