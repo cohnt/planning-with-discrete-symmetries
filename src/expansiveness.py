@@ -61,6 +61,16 @@ class Expansiveness:
                 return False
         return True
 
+    def plot_pareto_scatter(self, ax, color="black"):
+        alphas = []
+        betas = []
+        for i in range(len(self.alpha_beta_pairs)):
+            for j in range(len(self.alpha_beta_pairs[i])):
+                alpha1, beta1 = self.alpha_beta_pairs[i][j]
+                alphas.append(alpha1)
+                betas.append(beta1)
+        ax.scatter(alphas, betas, c=color)
+
     def plot_pareto_curves(self, ax, color="black"):
         for i in range(len(self.alpha_beta_pairs)):
             alphas = []
