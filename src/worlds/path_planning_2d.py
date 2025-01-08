@@ -1,7 +1,6 @@
 import numpy as np
 import os.path
 import time
-import pathlib
 import alphashape
 import typing
 
