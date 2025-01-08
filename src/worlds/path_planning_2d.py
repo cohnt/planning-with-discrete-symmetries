@@ -146,6 +146,42 @@ def add_obstacles_to_directives(directives, tris, path):
 """ % (name, os.path.join(path, name), name)
     return directives_str
 
+def draw_boundaries(meshcat, limits):
+    vertices = [
+        [limits[0][0], limits[1][0]],
+        [limits[0][0], limits[1][1]],
+        [limits[0][1], limits[1][1]],
+        [limits[0][1], limits[1][0]]
+    ]
+    edges = [
+        (0, 1),
+        (1, 2),
+        (2, 3),
+        (3, 0)
+    ]
+
+    # Prepare points for all line segments
+    points = []
+
+    # Add line segments to Meshcat
+    for start_idx, end_idx in edges:
+        start = vertices[start_idx]
+        end = vertices[end_idx]
+        points.append(start + [0])
+        points.append(end + [0])
+
+    # Convert points and colors to arrays
+    points = np.vstack(points).T  # 3xN array of points
+    starts = points[:,::2]
+    ends = points[:,1::2]
+
+    # Add line segments to the group "boundaries"
+    meshcat.SetLineSegments(
+        path="boundaries",
+        start=starts,
+        end=ends
+    )
+
 def build_env(meshcat, params : SetupParams):
     if params.n_sides == 1:
         raise NotImplementedError # TODO
@@ -220,10 +256,16 @@ def build_env(meshcat, params : SetupParams):
     trans = np.array([0, 0, 1])
     tf = RigidTransform(RotationMatrix(rot), trans)
 
-    meshcat.Set2dRenderMode(X_WC=tf, xmin=params.limits[0][0], xmax=params.limits[0][1], ymin=params.limits[1][0], ymax=params.limits[1][1])
+    meshcat.Set2dRenderMode(X_WC=tf,
+                            xmin=params.limits[0][0] - 1,
+                            xmax=params.limits[0][1] + 1,
+                            ymin=params.limits[1][0] - 1,
+                            ymax=params.limits[1][1] + 1)
     meshcat.SetProperty("/Lights/PointLightNegativeX", "visible", False)
     meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
     meshcat.SetProperty("/Lights/FillLight", "visible", False)
+
+    draw_boundaries(meshcat, params.limits)
 
     return diagram, collision_checker
 
