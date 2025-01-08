@@ -262,9 +262,11 @@ def build_env(meshcat, params : SetupParams):
     edge_step_size = 0.01
     collision_checker = SceneGraphCollisionChecker(model=model, robot_model_instances=robot_model_instances, edge_step_size=edge_step_size)
 
-    # meshcat.SetProperty("/Lights/PointLightNegativeX", "visible", False)
-    # meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
-    # meshcat.SetProperty("/Lights/FillLight", "visible", False)
+    meshcat.SetProperty("/Grid", "visible", False)
+
+    camera_target = np.mean(params.limits, axis=1)
+    camera_position = camera_target * 2.5
+    meshcat.SetCameraPose(camera_position, camera_target)
 
     return diagram, collision_checker
 
