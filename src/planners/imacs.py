@@ -378,7 +378,7 @@ def UnwrapToContinuousPathSO3(G, path, symmetry_dof_start):
         # We will right-multiply the start and end matrices by this matrix
         dmat = m2.T @ m1
         new_end = end.copy()
-        new_mat = dmat @ end[symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        new_mat = end[symmetry_dof_start:symmetry_dof_end].reshape(3,3) @ dmat
         new_end[symmetry_dof_start:symmetry_dof_end] = new_mat.flatten()
         new_path.append(new_end)
 
