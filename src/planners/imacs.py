@@ -194,12 +194,7 @@ class SO3DistanceSq(DistanceSq):
         # TODO: vectorize
         for i in range(len(q1s)):
             for j in range(len(q2s)):
-                if j < i and q1s is q2s:
-                    distances[i,j] = distances[j,i]
-                    nearest_entries[i,j] = nearest_entries[j,i]
-                    continue
-                else:
-                    distances[i,j], nearest_entries[i,j] = self(q1s[i], q2s[j])
+                distances[i,j], nearest_entries[i,j] = self(q1s[i], q2s[j])
 
         return distances, nearest_entries
 
