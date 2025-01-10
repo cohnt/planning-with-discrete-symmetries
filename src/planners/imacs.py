@@ -34,7 +34,8 @@ def so2_to_theta(m):
     x, y = m[0,0], m[1,0]
     return np.arctan2(y, x)
 
-def quaternion_to_so3(qs):
+def quaternion_to_so3(qs_in):
+    qs = qs_in.copy()
     # Stored as [w, x, y, z]. Must be a numpy array
     single = False
     if len(qs.shape) == 1:
@@ -48,13 +49,13 @@ def quaternion_to_so3(qs):
     else:
         return np.array(mats)
 
-def so3_to_quaternion(ms):
+def so3_to_quaternion(ms_in):
+    ms = ms_in.copy()
     single = False
     if len(ms.shape) == 2:
         single = True
         ms = ms.reshape(1, 3, 3)
     qs = []
-    print(ms)
     for m in ms:
         qs.append(RotationMatrix(m).ToQuaternion().wxyz())
     if single:
@@ -411,6 +412,30 @@ def SO3PathToDrakeSlerpTraj(Metric, path, symmetry_dof_start):
         full_traj.Append(top_traj)
 
     return full_traj
+
+class SO3CollisionCheckerWrapper():
+    def __init__(self, CollisionChecker, ambient_dim, symmetry_dof_start):
+        self.CollisionChecker = CollisionChecker
+        self.ambient_dim = ambient_dim
+        self.symmetry_dof_start = symmetry_dof_start
+
+    def _remap_qs(self, qs):
+        new_qs = np.zeros((qs.shape[0], qs.shape[1] - 5))
+        new_qs[:,:self.symmetry_dof_start] = qs[:,:self.symmetry_dof_start]
+        new_qs[:,self.symmetry_dof_start:self.symmetry_dof_start+4] = so3_to_quaternion(qs[:,self.symmetry_dof_start:self.symmetry_dof_start+9].reshape(-1,3,3))
+        new_qs[:,self.symmetry_dof_start+4:] = qs[:,self.symmetry_dof_start+9:]
+        return new_qs
+
+    def CheckConfigCollisionFree(self, q):
+        return self.CheckConfigsCollisionFree(np.array([q]))
+
+    def CheckConfigsCollisionFree(self, qs):
+        # 9 values needed for SO(3) matrix, but only 4 for the quaternion
+        return self.CollisionChecker.CheckConfigsCollisionFree(self._remap_qs(qs))
+
+    def CheckEdgeCollisionFreeParallel(self, q1, q2):
+        new_q1, new_q2 = self._remap_qs(np.array([q1, q2]))
+        return self.CollisionChecker.CheckEdgeCollisionFreeParallel(new_q1, new_q2)
 
 if __name__ == "__main__":
     G = src.symmetry.CyclicGroupSO2(3)
