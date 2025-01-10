@@ -1,6 +1,8 @@
 import numpy as np
 import src.symmetry
 
+from pydrake.all import RotationMatrix, Quaternion
+
 def rotation_distance_so2(m1, m2):
     R = m1 @ np.moveaxis(m2, -2, -1)
     cos_theta = np.trace(R, 0, -2, -1) / 2
@@ -23,6 +25,34 @@ def theta_to_so2(q):
 def so2_to_theta(m):
     x, y = m[0,0], m[1,0]
     return np.arctan2(y, x)
+
+def quaternion_to_so3(qs):
+    # Stored as [w, x, y, z]. Must be a numpy array
+    single = False
+    if len(qs.shape) == 1:
+        single = True
+        qs = qs.reshape(1, 4)
+    mats = []
+    for q in qs:
+        mats.append(RotationMatrix(Quaternion(*q)).matrix())
+    if single:
+        return mats[0]
+    else:
+        return np.array(mats)
+
+def so3_to_quaternion(ms):
+    single = False
+    if len(ms.shape) == 2:
+        single = True
+        ms = ms.reshape(1, 3, 3)
+    qs = []
+    print(ms)
+    for m in ms:
+        qs.append(RotationMatrix(m).ToQuaternion().wxyz())
+    if single:
+        return qs[0]
+    else:
+        return np.array(qs)
 
 class DistanceSq():
     def __init__(self, G, ambient_dim, symmetry_dof_start, symmetry_weight=1.0):
@@ -130,18 +160,26 @@ class SO3DistanceSq(DistanceSq):
         assert len(q1) == self.ambient_dim
         assert len(q2) == self.ambient_dim
 
-        symmetry_dof_end = self.symmetry_dof_start + 9
+        symmetry_dof_end = self.symmetry_dof_start + 4
 
-        m1 = q1[self.symmetry_dof_start:symmetry_dof_end].reshape(3,3)
-        m2 = q2[self.symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        m1 = quaternion_to_so3(q1[self.symmetry_dof_start:symmetry_dof_end])
+        m2 = quaternion_to_so3(q2[self.symmetry_dof_start:symmetry_dof_end])
         m2_prime = self.G.orbit(m2)
         distances = rotation_distance_so3(m1, m2_prime)
         idx = np.argmin(distances)
         symmetry_distance = distances[idx]
         remaining_distance_sq = np.sum((np.delete(q1, slice(self.symmetry_dof_start, symmetry_dof_end)) - np.delete(q2, slice(self.symmetry_dof_start, symmetry_dof_end))) ** 2)
         total_distance_sq = self.symmetry_weight * symmetry_distance**2 + remaining_distance_sq
+        
+        # Quaternion switching logic
+        maybe_best_q = so3_to_quaternion(m2_prime[idx])
+        norm1 = np.linalg.norm(maybe_best_q - q1[self.symmetry_dof_start:symmetry_dof_end])
+        norm2 = np.linalg.norm(-maybe_best_q - q1[self.symmetry_dof_start:symmetry_dof_end])
+        if norm2 < norm1:
+            maybe_best_q *= -1
+
         q_out = q2.copy()
-        q_out[self.symmetry_dof_start:symmetry_dof_end] = m2_prime[idx].flatten()
+        q_out[self.symmetry_dof_start:symmetry_dof_end] = maybe_best_q
         return total_distance_sq, q_out
 
     def pairwise(self, q1s, q2s=None):
@@ -309,17 +347,20 @@ if __name__ == "__main__":
 
     print()
     G = src.symmetry.CyclicGroupSO3(4)
-    D = SO3DistanceSq(G, 12, 3)
-    q1 = np.append(np.zeros(3), np.eye(3).flatten())
-    q2 = np.append(np.zeros(3), [
+    D = SO3DistanceSq(G, 7, 3)
+    m1 = np.eye(3)
+    m2 = np.array([
         1, 0, 0,
         0, 0, 1,
         0, -1, 0
-    ]) # Rotation about x axis by 90 degrees
-    print(D(q1, q2)) # Should be zero, since it's a square pyramid
-    q3 = np.append(np.zeros(3), [
+    ]).reshape(3, 3) # Rotation about x axis by 90 degrees
+    m3 = np.array([
         -1, 0, 0,
         0, -1, 0,
         0, 0, 1
-    ]) # Rotation about z axis by 180 degrees
-    print(np.pi**2, D(q1, q3)) # Should be pi^2 (about 9.8)
+    ]).reshape(3, 3) # Rotation about z axis by 180 degrees
+    q1 = np.append(np.zeros(3), so3_to_quaternion(m1))
+    q2 = np.append(np.zeros(3), so3_to_quaternion(m2))
+    q3 = np.append(np.array([0, 1, 0]), so3_to_quaternion(m3))
+    print(D(q1, q2)) # Should be zero, since it's a square pyramid
+    print(1 + np.pi**2, D(q1, q3)) # Should be 1^ + pi^2 (about 10.8)
