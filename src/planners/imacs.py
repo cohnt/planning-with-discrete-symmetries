@@ -2,6 +2,7 @@ import numpy as np
 import src.symmetry
 
 from pydrake.all import RotationMatrix, Quaternion
+from scipy.stats import special_ortho_group
 
 def rotation_distance_so2(m1, m2):
     R = m1 @ np.moveaxis(m2, -2, -1)
@@ -243,6 +244,24 @@ class SO2SampleUniform(SampleUniform):
     def __call__(self, n):
         return np.random.uniform(low=self.limits_lower, high=self.limits_upper, size=(n, self.ambient_dim))
 
+class SO3SampleUniform(SampleUniform):
+    def __init__(self, G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper):
+        super().__init__(G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper)
+        self.limits_lower[self.symmetry_dof_start] = -1
+        self.limits_upper[self.symmetry_dof_start] = 1
+        # These will be ignored, since we sample from SO(3) in a special way. But we need them to be finite,
+        # so that we can call np.random.uniform, before substituting the new values in.
+
+        # Keep consistency between the random seed we use in numpy and scipy.
+        self.rng = np.random.default_rng()
+
+    def __call__(self, n):
+        qs = np.random.uniform(low=self.limits_lower, high=self.limits_upper, size=(n, self.ambient_dim))
+        symmetry_dof_end = self.symmetry_dof_start + 9
+        for i in range(len(qs)):
+            qs[i,self.symmetry_dof_start:symmetry_dof_end] = special_ortho_group.rvs(3, random_state=self.rng).flatten()
+        return qs
+
 # Given two values of theta and a given group, transform theta1 (via the group
 # action) such that the euclidean interpolation from theta0 to theta1 is the
 # geodesic interpolation on SO(2) / G.
@@ -365,3 +384,10 @@ if __name__ == "__main__":
     print(I(q1, q2, 0)[3:].reshape(3,3))
     print(I(q1, q2, 0.5)[3:].reshape(3,3))
     print(I(q1, q2, 1)[3:].reshape(3,3))
+
+    S = SO3SampleUniform(G, 12, 3, -np.ones(12), np.ones(12))
+    print()
+    q = S(1)
+    print(q)
+    print(q[0, 3:].reshape(3,3) @ q[0, 3:].reshape(3,3).T)
+    print(S(5))
