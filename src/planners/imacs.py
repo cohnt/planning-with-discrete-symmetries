@@ -117,13 +117,51 @@ class SO2DistanceSq(DistanceSq):
         nearest_thetas_old = nearest_thetas.copy()
 
         # Wrap the thetas around if necessary
-        nearest_thetas = WrapTheta2dVectorized(self.G, q1s[:,self.symmetry_dof_start], nearest_thetas_old)
+        nearest_thetas = WrapTheta2dVectorized(self.G, np_q1s[:,self.symmetry_dof_start], nearest_thetas_old)
 
         # Assign theta values correctly
-        nearest_entries = np.tile(q2s, (len(q1s), 1, 1))
+        nearest_entries = np.tile(np_q2s, (len(q1s), 1, 1))
         nearest_entries[:, :, self.symmetry_dof_start] = nearest_thetas
 
         return self.symmetry_weight * min_distances ** 2 + remaining_dists_squared, nearest_entries
+
+class SO3DistanceSq(DistanceSq):
+    def __call__(self, q1, q2):
+        assert len(q1) == self.ambient_dim
+        assert len(q2) == self.ambient_dim
+
+        symmetry_dof_end = self.symmetry_dof_start + 9
+
+        m1 = q1[self.symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        m2 = q2[self.symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        m2_prime = self.G.orbit(m2)
+        distances = rotation_distance_so3(m1, m2_prime)
+        idx = np.argmin(distances)
+        symmetry_distance = distances[idx]
+        remaining_distance_sq = np.sum((np.delete(q1, slice(self.symmetry_dof_start, symmetry_dof_end)) - np.delete(q2, slice(self.symmetry_dof_start, symmetry_dof_end))) ** 2)
+        total_distance_sq = self.symmetry_weight * symmetry_distance**2 + remaining_distance_sq
+        q_out = q2.copy()
+        q_out[self.symmetry_dof_start:symmetry_dof_end] = m2_prime[idx].flatten()
+        return total_distance_sq, q_out
+
+    def pairwise(self, q1s, q2s=None):
+        if q2s is None:
+            q2s = q1s
+
+        distances = np.zeros((len(q1s), len(q2s)))
+        nearest_entries = np.zeros((len(q1s), len(q2s), self.ambient_dim))
+
+        # TODO: vectorize
+        for i in range(len(q1s)):
+            for j in range(len(q2s)):
+                if j < i and q1s is q2s:
+                    distances[i,j] = distances[j,i]
+                    nearest_entries[i,j] = nearest_entries[j,i]
+                    continue
+                else:
+                    distances[i,j], nearest_entries[i,j] = self(q1s[i], q2s[j])
+
+        return distances, nearest_entries
 
 class Interpolate():
     def __init__(self, G, ambient_dim, symmetry_dof_start):
@@ -268,3 +306,20 @@ if __name__ == "__main__":
     print()
     print(S(1))
     print(S(5))
+
+    print()
+    G = src.symmetry.CyclicGroupSO3(4)
+    D = SO3DistanceSq(G, 12, 3)
+    q1 = np.append(np.zeros(3), np.eye(3).flatten())
+    q2 = np.append(np.zeros(3), [
+        1, 0, 0,
+        0, 0, 1,
+        0, -1, 0
+    ]) # Rotation about x axis by 90 degrees
+    print(D(q1, q2)) # Should be zero, since it's a square pyramid
+    q3 = np.append(np.zeros(3), [
+        -1, 0, 0,
+        0, -1, 0,
+        0, 0, 1
+    ]) # Rotation about z axis by 180 degrees
+    print(np.pi**2, D(q1, q3)) # Should be pi^2 (about 9.8)
