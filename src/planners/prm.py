@@ -4,6 +4,8 @@ from tqdm.auto import tqdm
 from src.util import repo_dir
 import pickle
 
+import src.planners.imacs as imacs
+
 class PRMOptions:
     def __init__(self, neighbor_radius=1e-1, neighbor_k=12, neighbor_mode="k",
                  check_size=1e-2, max_vertices=1e3):
@@ -135,9 +137,13 @@ class PRM:
     def _maybe_connect(self, i, j, qj, dist=None):
         q1 = self.graph.nodes[i]["q"]
         q2 = qj
-        if np.abs(q2[self.Sampler.symmetry_dof_start] - q1[self.Sampler.symmetry_dof_start]) > np.pi / self.Sampler.G.order():
-            import pdb
-            pdb.set_trace()
+        if isinstance(self.Sampler, imacs.SO2SampleUniform):
+            if np.abs(q2[self.Sampler.symmetry_dof_start] - q1[self.Sampler.symmetry_dof_start]) > np.pi / self.Sampler.G.order():
+                import pdb
+                pdb.set_trace()
+        elif isinstance(self.Sampler, imacs.SO3SampleUniform):
+            # TODO test
+            pass
         if dist is None:
             dist, _ = self.Metric(q1, q2)
         if self.CollisionChecker.CheckEdgeCollisionFreeParallel(q1, q2):
