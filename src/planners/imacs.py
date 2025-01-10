@@ -395,8 +395,9 @@ def SO3PathToDrakeSlerpTraj(Metric, path, symmetry_dof_start):
 
     symmetry_dof_end = symmetry_dof_start + 9
     mats = np.asarray(path)[:,symmetry_dof_start:symmetry_dof_end]
-    mats.reshape(len(path), 3, 3)
-    slerp_traj = PiecewiseQuaternionSlerp(times, mats)
+    mats = mats.reshape(len(path), 3, 3)
+    slerp_breaks = np.append(0, np.cumsum(times))
+    slerp_traj = PiecewiseQuaternionSlerp(slerp_breaks, mats)
 
     full_traj = StackedTrajectory(rowwise=True)
     if symmetry_dof_start > 0:
