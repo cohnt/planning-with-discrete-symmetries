@@ -317,9 +317,9 @@ if __name__ == "__main__":
         0, -1, 0
     ]) # Rotation about x axis by 90 degrees
     print(D(q1, q2)) # Should be zero, since it's a square pyramid
-    q3 = np.append(np.zeros(3), [
+    q3 = np.append(np.array([0, 1, 0]), [
         -1, 0, 0,
         0, -1, 0,
         0, 0, 1
-    ]) # Rotation about z axis by 180 degrees
-    print(np.pi**2, D(q1, q3)) # Should be pi^2 (about 9.8)
+    ]) # Rotation about z axis by 180 degrees, and slight translation
+    print(1**2 + np.pi**2, D(q1, q3)) # Should be 1^2 + pi^2 (about 10.8)
