@@ -273,9 +273,6 @@ def build_env(meshcat, params : SetupParams):
 - add_model:
     name: robot
     file: package://symmetries/models/{shape}
-- add_weld:
-    parent: world
-    child: robot::base
 """
     
     tets = alphashape_make_obstacles(params.limits,
