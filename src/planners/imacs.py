@@ -1,6 +1,8 @@
 import numpy as np
 import src.symmetry
 
+from pydrake.all import RotationMatrix, Quaternion
+
 def rotation_distance_so2(m1, m2):
     R = m1 @ np.moveaxis(m2, -2, -1)
     cos_theta = np.trace(R, 0, -2, -1) / 2
@@ -187,6 +189,36 @@ class SO2Interpolate(Interpolate):
             else:
                 return t * (q2 + vec) + (1 - t) * q1
 
+class SO3Interpolate(Interpolate):
+    def __call__(self, q1, q2, t):
+        assert 0 <= t <= 1
+
+        # Special logic needed for numerical stability.
+        if t < 1e-10:
+            return q1
+        elif 1 - t < 1e-10:
+            return q2
+
+        symmetry_dof_end = self.symmetry_dof_start + 9
+        mat1 = q1[self.symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        mat2 = q2[self.symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+
+        quat1 = RotationMatrix(mat1).ToQuaternion().wxyz()
+        quat2 = RotationMatrix(mat2).ToQuaternion().wxyz()
+        
+        cos_theta = np.dot(quat1, quat2)
+        theta = np.arccos(np.clip(cos_theta, -1, 1))
+        t1 = np.sin((1 - t) * theta) / np.sin(theta)
+        t2 = np.sin(t * theta) / np.sin(theta)
+        quat_out = t1 * quat1 + t2 * quat2
+        if cos_theta < 0:
+            quat_out *= -1
+
+        new_mat = RotationMatrix(Quaternion(*quat_out)).matrix()
+        q_out = t * q2 + (1 - t) * q1
+        q_out[self.symmetry_dof_start:symmetry_dof_end] = new_mat.flatten()
+        return q_out
+
 class SampleUniform():
     def __init__(self, G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper):
         self.G = G
@@ -308,6 +340,7 @@ if __name__ == "__main__":
     print(S(5))
 
     print()
+
     G = src.symmetry.CyclicGroupSO3(4)
     D = SO3DistanceSq(G, 12, 3)
     q1 = np.append(np.zeros(3), np.eye(3).flatten())
@@ -323,3 +356,12 @@ if __name__ == "__main__":
         0, 0, 1
     ]) # Rotation about z axis by 180 degrees, and slight translation
     print(1**2 + np.pi**2, D(q1, q3)) # Should be 1^2 + pi^2 (about 10.8)
+
+    I = SO3Interpolate(G, 12, 3)
+    print()
+    print(I(q1, q3, 0))
+    print(I(q1, q3, 0.5))
+    print(I(q1, q3, 1))
+    print(I(q1, q2, 0)[3:].reshape(3,3))
+    print(I(q1, q2, 0.5)[3:].reshape(3,3))
+    print(I(q1, q2, 1)[3:].reshape(3,3))
