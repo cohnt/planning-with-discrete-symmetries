@@ -1,7 +1,14 @@
 import numpy as np
 import src.symmetry
 
-from pydrake.all import RotationMatrix, Quaternion
+from pydrake.all import (
+    RotationMatrix,
+    Quaternion,
+    PiecewiseQuaternionSlerp,
+    StackedTrajectory,
+    PiecewisePolynomial,
+    CompositeTrajectory
+)
 from scipy.stats import special_ortho_group
 
 def rotation_distance_so2(m1, m2):
@@ -26,6 +33,35 @@ def theta_to_so2(q):
 def so2_to_theta(m):
     x, y = m[0,0], m[1,0]
     return np.arctan2(y, x)
+
+def quaternion_to_so3(qs):
+    # Stored as [w, x, y, z]. Must be a numpy array
+    single = False
+    if len(qs.shape) == 1:
+        single = True
+        qs = qs.reshape(1, 4)
+    mats = []
+    for q in qs:
+        mats.append(RotationMatrix(Quaternion(*q)).matrix())
+    if single:
+        return mats[0]
+    else:
+        return np.array(mats)
+
+def so3_to_quaternion(ms):
+    single = False
+    if len(ms.shape) == 2:
+        single = True
+        ms = ms.reshape(1, 3, 3)
+    qs = []
+    print(ms)
+    for m in ms:
+        qs.append(RotationMatrix(m).ToQuaternion().wxyz())
+    if single:
+        return qs[0]
+    else:
+        return np.array(qs)
+
 
 class DistanceSq():
     def __init__(self, G, ambient_dim, symmetry_dof_start, symmetry_weight=1.0):
@@ -329,6 +365,52 @@ def UnwrapToContinuousPath2d(G, path, symmetry_idx):
             pdb.set_trace()
 
     return new_path
+
+def UnwrapToContinuousPathSO3(G, path, symmetry_dof_start):
+    if len(path) == 0:
+        return []
+
+    symmetry_dof_end = symmetry_dof_start + 9
+
+    new_path = [path[0][0].copy(), path[0][1].copy()]
+    for start, end in path[1:]:
+        m1 = new_path[-1][symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        m2 = start[symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        
+        assert G.equivalent(m1, m2)
+
+        # We will right-multiply the start and end matrices by this matrix
+        dmat = m2.T @ m1
+        new_end = end.copy()
+        new_mat = dmat @ end[symmetry_dof_start:symmetry_dof_end].reshape(3,3)
+        new_end[symmetry_dof_start:symmetry_dof_end] = new_mat.flatten()
+        new_path.append(new_end)
+
+    return new_path
+
+def SO3PathToDrakeSlerpTraj(Metric, path, symmetry_dof_start):
+    assert len(path) > 1
+    times = [np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
+
+    symmetry_dof_end = symmetry_dof_start + 9
+    mats = np.asarray(path)[:,symmetry_dof_start:symmetry_dof_end]
+    mats.reshape(len(path), 3, 3)
+    slerp_traj = PiecewiseQuaternionSlerp(times, mats)
+
+    full_traj = StackedTrajectory(rowwise=True)
+    if symmetry_dof_start > 0:
+        segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1][:symmetry_dof_start], path[i][:symmetry_dof_start]]).T) for i in range(1, len(path))]
+        top_traj = CompositeTrajectory.AlignAndConcatenate(segments)
+        full_traj.Append(top_traj)
+
+    full_traj.Append(slerp_traj)
+
+    if symmetry_dof_end < len(path[0]):
+        segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1][symmetry_dof_end:], path[i][symmetry_dof_end:]]).T) for i in range(1, len(path))]
+        top_traj = CompositeTrajectory.AlignAndConcatenate(segments)
+        full_traj.Append(top_traj)
+
+    return full_traj
 
 if __name__ == "__main__":
     G = src.symmetry.CyclicGroupSO2(3)
