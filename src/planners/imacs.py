@@ -373,6 +373,10 @@ def UnwrapToContinuousPathSO3(G, path, symmetry_dof_start):
         m1 = new_path[-1][symmetry_dof_start:symmetry_dof_end].reshape(3,3)
         m2 = start[symmetry_dof_start:symmetry_dof_end].reshape(3,3)
         
+        if not G.equivalent(m1, m2):
+            import pdb
+            pdb.set_trace()
+
         assert G.equivalent(m1, m2)
 
         # We will right-multiply the start and end matrices by this matrix
