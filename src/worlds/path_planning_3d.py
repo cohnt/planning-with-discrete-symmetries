@@ -315,6 +315,12 @@ def build_env(meshcat, params : SetupParams):
 
     camera_target = np.mean(params.limits, axis=1)
     camera_position = camera_target * 2.5
+
+    # Slight adjustment so we're not perfectly corner-on
+    camera_position[0] += 5
+    camera_position[1] -= 0
+    camera_position[2] -= 2
+
     meshcat.SetCameraPose(camera_position, camera_target)
 
     draw_boundaries(meshcat, params.limits)
