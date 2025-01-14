@@ -325,13 +325,15 @@ def build_env(meshcat, params : SetupParams):
 
     draw_boundaries(meshcat, params.limits)
 
+    print("Done building world.")
+
     return diagram, collision_checker
 
 if __name__ == "__main__":
     meshcat = StartMeshcat()
 
-    limits = [[0, 20], [0, 20], [0, 20]]
-    params = SetupParams(symmetry.TetrahedralGroup(), True, limits, 300, 0.45, 0)
+    limits = [[0, 10], [0, 10], [0, 10]]
+    params = SetupParams(symmetry.TetrahedralGroup(), True, limits, 150, 0.7, 0)
     diagram, collision_checker = build_env(meshcat, params)
 
     diagram_context = diagram.CreateDefaultContext()

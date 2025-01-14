@@ -19,9 +19,9 @@ options = prm.PRMOptions(max_vertices=5e2, neighbor_k=12, neighbor_radius=5e0, n
 
 meshcat = StartMeshcat()
 
-limits = [[0, 20], [0, 20], [0, 20]]
+limits = [[0, 10], [0, 10], [0, 10]]
 G = symmetry.TetrahedralGroup()
-params = path_planning_3d.SetupParams(G, True, limits, 300, 0.45, 0)
+params = path_planning_3d.SetupParams(G, True, limits, 150, 0.7, 0)
 diagram, CollisionChecker = path_planning_3d.build_env(meshcat, params)
 
 sampler_limits_lower = np.zeros(12)
@@ -46,8 +46,8 @@ roadmap.save(fname)
 roadmap = prm.PRM.load(fname, CollisionCheckerWrapper)
 
 # Visualize a random plan
-q0 = np.append(np.eye(3).flatten(), [0.01, 0.01, 0])
-q1 = np.append(np.eye(3).flatten(), [19.9, 19.9, 19.9])
+q0 = np.append(np.eye(3).flatten(), [0.01, 0.01, 0.01])
+q1 = np.append(np.eye(3).flatten(), [9.99, 9.99, 9.99])
 
 assert CollisionCheckerWrapper.CheckConfigCollisionFree(q0)
 assert CollisionCheckerWrapper.CheckConfigCollisionFree(q1)
