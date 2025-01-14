@@ -56,6 +56,8 @@ path = roadmap.plan(q0, q1)
 path = imacs.UnwrapToContinuousPathSO3(G, path, 0)
 traj1 = imacs.SO3PathToDrakeSlerpTraj(Metric, path, 0)
 
+print("SE(3)/G path length:", Metric.path_length(path))
+
 # Baseline
 
 G2 = symmetry.CyclicGroupSO3(1)
@@ -74,6 +76,8 @@ roadmap2 = prm.PRM.load(fname, CollisionCheckerWrapper)
 path = roadmap2.plan(q0, q1)
 path = imacs.UnwrapToContinuousPathSO3(G2, path, 0)
 traj2 = imacs.SO3PathToDrakeSlerpTraj(Metric, path, 0)
+
+print("Baseline path length:", Metric.path_length(path))
 
 # Compare
 
