@@ -188,13 +188,57 @@ class SO3DistanceSq(DistanceSq):
         if q2s is None:
             q2s = q1s
 
-        distances = np.zeros((len(q1s), len(q2s)))
-        nearest_entries = np.zeros((len(q1s), len(q2s), self.ambient_dim))
+        np_q1s = np.asarray(q1s)
+        np_q2s = np.asarray(q2s)
 
-        # TODO: vectorize
-        for i in range(len(q1s)):
-            for j in range(len(q2s)):
-                distances[i,j], nearest_entries[i,j] = self(q1s[i], q2s[j])
+        symmetry_dof_end = self.symmetry_dof_start + 9
+
+        # Euclidean components
+        remaining_q1s = np.delete(np_q1s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
+        remaining_q2s = np.delete(np_q2s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
+        remaining_dists_squared = (
+            np.sum(remaining_q1s**2, axis=1, keepdims=True)  # Shape (n, 1)
+            + np.sum(remaining_q2s**2, axis=1)              # Shape (m,)
+            - 2 * np.dot(remaining_q1s, remaining_q2s.T)    # Shape (n, m)
+        )
+
+        R1s = np_q1s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
+        R2s = np_q2s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
+        orbits = np.array([self.G.orbit(R2) for R2 in R2s])  # Shape (m, orbit_len, 3, 3)
+
+        # Compute pairwise R = m1 @ m2^T for all combinations of matrices1 and orbits
+        R = R1s[:, None, None] @ np.transpose(orbits, (0, 1, 3, 2))  # Shape: (N, M, orbit_size, 3, 3)
+
+        # Compute the cosine of the angle for each pair
+        cos_theta = (np.trace(R, axis1=-2, axis2=-1) - 1) / 2  # Shape: (N, M, orbit_size)
+
+        # Compute the angles (distances)
+        theta = np.arccos(np.clip(cos_theta, -1, 1))  # Shape: (N, M, orbit_size)
+
+        # Find the minimum distance and corresponding matrix for each (i, j) pair
+        min_indices = np.argmin(theta, axis=2)  # Shape: (N, M)
+        distances = np.min(theta, axis=2)  # Shape: (N, M)
+
+        # Extract the closest matrices from the orbit
+        N, M = min_indices.shape
+        orbit_size = orbits.shape[1]
+
+        # Prepare indices for advanced indexing
+        orbit_indices = np.arange(orbit_size)
+        min_indices_expanded = min_indices[:, :, None, None, None]  # Shape: (N, M, 1, 1)
+
+        orbits_repeated = np.repeat(orbits[None, :, :, :, :], N, axis=0)  # Shape: (N, M, orbit_size, 3, 3)
+        orbits_repeated = np.repeat(orbits[None, :, :, :, :], R1s.shape[0], axis=0)  # Shape: (N, M, orbit_size, 3, 3)
+
+        closest_orbits = np.take_along_axis(orbits_repeated, min_indices_expanded, axis=2).squeeze(2)  # Shape: (N, M, 3, 3)
+
+        # Combine with the Euclidean distance components
+        distances = self.symmetry_weight * distances ** 2 + remaining_dists_squared
+
+        # Fix how nearest entries are listed
+        nearest_entries = np.tile(np_q2s, (len(q1s), 1, 1))
+
+        nearest_entries[:, :, self.symmetry_dof_start:symmetry_dof_end] = closest_orbits.reshape(len(q1s), len(q2s), 9)
 
         return distances, nearest_entries
 
