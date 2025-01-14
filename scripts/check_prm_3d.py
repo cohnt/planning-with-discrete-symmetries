@@ -16,6 +16,7 @@ from pydrake.all import (
 )
 
 options = prm.PRMOptions(max_vertices=5e2, neighbor_k=12, neighbor_radius=5e0, neighbor_mode="k")
+random_seed = 0
 
 meshcat = StartMeshcat()
 
@@ -28,7 +29,7 @@ sampler_limits_lower = np.zeros(12)
 sampler_limits_upper = np.zeros(12)
 sampler_limits_lower[-3:] = [limits[0][0], limits[1][0], limits[2][0]]
 sampler_limits_upper[-3:] = [limits[0][1], limits[1][1], limits[2][1]]
-Sampler = imacs.SO3SampleUniform(G, 12, 0, sampler_limits_lower, sampler_limits_upper)
+Sampler = imacs.SO3SampleUniform(G, 12, 0, sampler_limits_lower, sampler_limits_upper, random_seed=random_seed)
 Metric = imacs.SO3DistanceSq(G, 12, 0)
 Interpolator = imacs.SO3Interpolate(G, 12, 0)
 CollisionCheckerWrapper = imacs.SO3CollisionCheckerWrapper(CollisionChecker, 12, 0)
@@ -38,7 +39,7 @@ diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 diagram.ForcedPublish(diagram_context)
 
-np.random.seed(0)
+np.random.seed(random_seed)
 roadmap.build()
 
 fname = "check_prm_3d_symmetric.pkl"
@@ -61,12 +62,13 @@ print("SE(3)/G path length:", Metric.path_length(path))
 # Baseline
 
 G2 = symmetry.CyclicGroupSO3(1)
-Sampler = imacs.SO3SampleUniform(G2, 12, 0, sampler_limits_lower, sampler_limits_upper)
+Sampler = imacs.SO3SampleUniform(G2, 12, 0, sampler_limits_lower, sampler_limits_upper, random_seed=random_seed)
 Metric = imacs.SO3DistanceSq(G2, 12, 0)
 Interpolator = imacs.SO3Interpolate(G2, 12, 0)
 CollisionCheckerWrapper = imacs.SO3CollisionCheckerWrapper(CollisionChecker, 12, 0)
 roadmap2 = prm.PRM(Sampler, Metric, Interpolator, CollisionCheckerWrapper, options)
-np.random.seed(0)
+
+np.random.seed(random_seed)
 roadmap2.build()
 
 fname = "check_prm_3d_baseline.pkl"

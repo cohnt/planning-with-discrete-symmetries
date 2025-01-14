@@ -277,7 +277,7 @@ class SO2SampleUniform(SampleUniform):
         return np.random.uniform(low=self.limits_lower, high=self.limits_upper, size=(n, self.ambient_dim))
 
 class SO3SampleUniform(SampleUniform):
-    def __init__(self, G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper):
+    def __init__(self, G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper, random_seed=0):
         super().__init__(G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper)
         self.limits_lower[self.symmetry_dof_start] = -1
         self.limits_upper[self.symmetry_dof_start] = 1
@@ -285,7 +285,7 @@ class SO3SampleUniform(SampleUniform):
         # so that we can call np.random.uniform, before substituting the new values in.
 
         # Keep consistency between the random seed we use in numpy and scipy.
-        self.rng = np.random.default_rng()
+        self.rng = np.random.default_rng(random_seed)
 
     def __call__(self, n):
         qs = np.random.uniform(low=self.limits_lower, high=self.limits_upper, size=(n, self.ambient_dim))
