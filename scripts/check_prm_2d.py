@@ -4,6 +4,7 @@ sys.path.append("..")
 import time
 import numpy as np
 
+import src.asymptotic_optimality_parameters as asymptotic
 import src.planners.imacs as imacs
 import src.planners.prm as prm
 import src.symmetry as symmetry
@@ -22,6 +23,13 @@ meshcat = StartMeshcat()
 limits = [[0, 20], [0, 20]]
 params = path_planning_2d.SetupParams(3, limits, 200, 1.25, 0)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
+
+c_free_volume = 1
+c_free_volume *= limits[0][1] - limits[0][0]
+c_free_volume *= limits[1][1] - limits[1][0]
+c_free_volume *= asymptotic.s1_volume()
+print("Symmetry-Aware PRM* Minimum Radius:", asymptotic.radius_prm(3, c_free_volume / 3))
+print("Symmetry-Unaware PRM* Minimum Radius:", asymptotic.radius_prm(3, c_free_volume))
 
 G = symmetry.CyclicGroupSO2(3)
 Sampler = imacs.SO2SampleUniform(G, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
