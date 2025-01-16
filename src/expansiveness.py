@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 class Expansiveness:
     def __init__(self, roadmap):
+        print("Processing roadmap to compute expansiveness...")
         # Call with a roadmap, stored as an undirected or directed graph
         self.G = roadmap
         if self.G.is_directed():
@@ -14,7 +15,7 @@ class Expansiveness:
 
         self.connected_components = list(nx.connected_components(self.G))
         self.component_indices = [-1 for _ in range(self.N)]
-        for idx, component in enumerate(self.connected_components):
+        for idx, component in tqdm(enumerate(self.connected_components)):
             for node in component:
                 self.component_indices[node] = idx
 
@@ -24,7 +25,7 @@ class Expansiveness:
 
         self.visible_lists = [list(s) for s in self.visible_sets]
         self.beta_vws = [[] for _ in range(self.N)]
-        for i in range(self.N):
+        for i in tqdm(range(self.N)):
             for j in range(len(self.visible_lists[i])):
                 vertex_index = self.visible_lists[i][j]
                 beta = len(self.visible_sets[vertex_index] - self.visible_sets[i])
@@ -41,13 +42,13 @@ class Expansiveness:
         # self.beta_lookout_size_table = [np.hstack((0.0, np.sort(beta_vw), 1.0))
                                         # for beta_vw in self.beta_vws]
         self.beta_lookout_size_table = [list(np.sort(beta_vw)) for beta_vw in self.beta_vws]
-        for i in range(len(self.beta_lookout_size_table)):
+        for i in tqdm(range(len(self.beta_lookout_size_table))):
             self.beta_lookout_size_table[i].append(self.beta_lookout_size_table[i][-1])
 
         # print(self.beta_lookout_size_table)
 
         self.alpha_beta_pairs = [[] for _ in range(self.N)]
-        for i in range(self.N):
+        for i in tqdm(range(self.N)):
             alphas = list(reversed(np.linspace(0, 1, len(self.beta_lookout_size_table[i]))))
             pairs = [(alpha, beta) for alpha, beta in zip(alphas, self.beta_lookout_size_table[i])]
             self.alpha_beta_pairs[i] = pairs
@@ -57,7 +58,7 @@ class Expansiveness:
     def query_expansiveness(self, alpha, beta):
         for i in range(self.N):
             if not pareto_dominated(alpha, beta, self.alpha_beta_pairs[i]):
-                print(self.alpha_beta_pairs[i])
+                # print(self.alpha_beta_pairs[i])
                 return False
         return True
 
@@ -109,7 +110,8 @@ def pareto_front(points):
     current_min_y = float('inf')  # Track the smallest y encountered
 
     # Traverse sorted points
-    for x, y in points:
+    print("Computing pareto front...")
+    for x, y in tqdm(points):
         if y < current_min_y:  # This point is not dominated
             pareto_points.append((x, y))
             current_min_y = y  # Update the smallest y

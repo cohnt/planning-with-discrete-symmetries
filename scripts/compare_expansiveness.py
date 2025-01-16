@@ -11,14 +11,14 @@ import src.worlds.path_planning_2d as path_planning_2d
 
 from pydrake.all import StartMeshcat
 
-options = prm.PRMOptions(max_vertices=300, neighbor_radius=np.inf, neighbor_mode="radius")
+options = prm.PRMOptions(max_vertices=5e2, neighbor_radius=np.inf, neighbor_mode="radius")
 
 meshcat = StartMeshcat()
 animate = False
 
 n = 3
-limits = [[0, 10], [0, 10]]
-params = path_planning_2d.SetupParams(n, limits, 40, 1.05, 0)
+limits = [[0, 5], [0, 5]]
+params = path_planning_2d.SetupParams(n, limits, 8, 1.05, 0)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
 
 diagram_context = diagram.CreateDefaultContext()
