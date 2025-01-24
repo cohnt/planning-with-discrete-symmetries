@@ -24,7 +24,8 @@ class RRTStar:
 
     def _rewire_tree(self):
         nodes = self.rrt.nodes()
-        dist_mat, targets = self.rrt.Metric.pairwise(nodes)
+        dist_sq_mat, targets = self.rrt.Metric.pairwise(nodes)
+        dist_mat = np.sqrt(dist_sq_mat)
 
         # Compute cost-to-come
         self._compute_cost_to_come()
@@ -55,7 +56,7 @@ class RRTStar:
             candidate_nodes_sorted = candidate_nodes[np.argsort(candidate_costs[candidate_nodes])]
 
             # Check candidate edges for collision (in order)
-            for candidate_node in reversed(candidate_nodes_sorted):
+            for candidate_node in candidate_nodes_sorted:
                 qi = self.rrt.tree.nodes[candidate_node]["q"]
                 qj = targets[candidate_node, j]
                 can_rewire = self.rrt.CollisionChecker.CheckEdgeCollisionFreeParallel(qi, qj)
