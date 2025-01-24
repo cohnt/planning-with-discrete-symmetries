@@ -8,12 +8,14 @@ import src.planners.imacs as imacs
 import src.planners.rrt as rrt
 import src.planners.shortcut as shortcut
 import src.symmetry as symmetry
+import src.visualization as visualization
 import src.worlds.path_planning_2d as path_planning_2d
 
 from pydrake.all import (
     StartMeshcat,
     PiecewisePolynomial,
-    CompositeTrajectory
+    CompositeTrajectory,
+    Rgba
 )
 
 options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, goal_sample_frequency=0.05, stop_at_goal=False)
@@ -118,10 +120,11 @@ traj1 = CompositeTrajectory.AlignAndConcatenate(segments)
 #             diagram.ForcedPublish(diagram_context)
 #             time.sleep(dt)
 
+visualization.draw_graph(meshcat, planner.tree, [0,1], path="rrt", color=Rgba(0, 0, 0, 1), linewidth=2.0)
 
 # Check RRT*
 import src.planners.star as star
-rrt_star_options = star.RRTStarOptions(connection_radius=10.0, connection_k=12, mode="radius")
+rrt_star_options = star.RRTStarOptions(connection_radius=20.0, connection_k=12, mode="radius")
 rrt_star = star.RRTStar(planner, rrt_star_options)
 
 new_path = rrt_star.return_plan()
@@ -136,6 +139,8 @@ t_scaling = 1/4
 times = [t_scaling * np.sqrt(Metric(new_path[i-1], new_path[i])[0]) for i in range(1, len(new_path))]
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([new_path[i-1], new_path[i]]).T) for i in range(1, len(new_path))]
 new_traj = CompositeTrajectory.AlignAndConcatenate(segments)
+
+visualization.draw_graph(meshcat, planner.tree, [0,1], path="rrt_star", color=Rgba(0, 1, 0, 1))
 
 # Alternate visualizing RRT and RRT*
 
