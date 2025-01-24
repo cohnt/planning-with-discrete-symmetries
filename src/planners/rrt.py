@@ -6,7 +6,7 @@ import time
 class RRTOptions:
     def __init__(self, step_size=1e0, check_size=1e-2, max_vertices=1e3,
                  max_iters=1e4, goal_sample_frequency=0.05, always_swap=False,
-                 timeout=np.inf):
+                 timeout=np.inf, stop_at_goal=True):
         self.step_size = step_size
         self.check_size = check_size
         self.max_vertices = int(max_vertices)
@@ -14,6 +14,7 @@ class RRTOptions:
         self.goal_sample_frequency = goal_sample_frequency
         self.always_swap = always_swap
         self.timeout = timeout
+        self.stop_at_goal = stop_at_goal
         assert self.goal_sample_frequency >= 0
         assert self.goal_sample_frequency <= 1
 
@@ -24,6 +25,8 @@ class RRT:
         self.Interpolator = Interpolator
         self.CollisionChecker = CollisionChecker
         self.options = options
+
+        self.goal_idx = None
 
     def plan(self, start, goal, verbose=False):
         t0 = time.time()
@@ -39,28 +42,32 @@ class RRT:
                 break
             iters.update(1)
             old_tree_size = len(self.tree)
-            if len(self.tree) >= self.options.max_vertices or success == True:
+            if len(self.tree) >= self.options.max_vertices:
                 break
-            sample_goal = np.random.random() < self.options.goal_sample_frequency
+            if success and self.options.stop_at_goal:
+                break
+            sample_goal = np.random.random() < self.options.goal_sample_frequency and not success
             q_subgoal = goal.copy() if sample_goal else self.Sampler(1).flatten()
             q_near_idx = self._nearest_idx(q_subgoal)
             _, q_subgoal = self.Metric(self.tree.nodes[q_near_idx]["q"], q_subgoal)
             while len(self.tree) < self.options.max_vertices:
                 status = self._extend(q_near_idx, q_subgoal)
+                q_near_idx = len(self.tree)-1
                 if status == "stopped" or status == "reached":
                     break
-                q_new_idx = len(self.tree) - 1
-                q_new = self.tree.nodes[len(self.tree)-1]["q"]
-                dist, qj = self.Metric(q_new, goal)
-                if dist <= self.options.step_size:
-                    success = self._maybe_add_and_connect(q_new_idx, qj)
-                    break
-                q_near_idx = len(self.tree)-1
+                if not success:
+                    q_new_idx = len(self.tree) - 1
+                    q_new = self.tree.nodes[len(self.tree)-1]["q"]
+                    dist, qj = self.Metric(q_new, goal)
+                    if dist <= self.options.step_size:
+                        success = self._maybe_add_and_connect(q_new_idx, qj)
+                        if success:
+                            self.goal_idx = q_new_idx
+                        break
             vertices.update(len(self.tree) - old_tree_size)
 
         if success:
-            goal_idx = len(self.tree) - 1
-            return self._path(0, goal_idx)
+            return self._path(0, self.goal_idx)
         else:
             return []
 
@@ -105,6 +112,10 @@ class RRT:
             path.append((self.tree.nodes[i]["q"],
                          self.tree[i][j]["qj"]))
         return path
+
+    def nodes(self):
+        all_qs = np.array([self.tree.nodes[i]["q"] for i in range(len(self.tree))])
+        return all_qs
 
 class BiRRT:
     def __init__(self, Sampler, Metric, Interpolator, CollisionChecker, options):
