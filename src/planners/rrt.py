@@ -62,7 +62,7 @@ class RRT:
                     if dist <= self.options.step_size:
                         success = self._maybe_add_and_connect(q_new_idx, qj)
                         if success:
-                            self.goal_idx = q_new_idx
+                            self.goal_idx = len(self.tree) - 1
                         break
             vertices.update(len(self.tree) - old_tree_size)
 
