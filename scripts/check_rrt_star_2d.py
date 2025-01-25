@@ -18,7 +18,7 @@ from pydrake.all import (
     Rgba
 )
 
-options = rrt.RRTOptions(max_vertices=200, max_iters=1e4, goal_sample_frequency=0.05, stop_at_goal=True)
+options = rrt.RRTOptions(max_vertices=750, max_iters=1e4, goal_sample_frequency=0.05, stop_at_goal=False)
 shortcut_options = shortcut.ShortcutOptions(max_iters=1e2)
 random_seed = 0
 
@@ -32,7 +32,7 @@ diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 diagram.ForcedPublish(diagram_context)
 
-G = symmetry.CyclicGroupSO2(100)
+G = symmetry.CyclicGroupSO2(3)
 Sampler = imacs.SO2SampleUniform(G, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
 Metric = imacs.SO2DistanceSq(G, 3, 2)
 Interpolator = imacs.SO2Interpolate(G, 3, 2)
@@ -44,7 +44,7 @@ plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 
 # Visualize a random plan
 q0 = np.array([0.01, 0.01, 0])
-q1 = np.array([5.9, 5.9, np.pi])
+q1 = np.array([19.9, 19.9, np.pi])
 
 assert CollisionChecker.CheckConfigCollisionFree(q0)
 assert CollisionChecker.CheckConfigCollisionFree(q1)
@@ -68,7 +68,7 @@ visualization.draw_graph(meshcat, planner.tree, [0,1], path="rrt", color=Rgba(0,
 
 # Check RRT*
 import src.planners.star as star
-rrt_star_options = star.RRTStarOptions(connection_radius=np.inf, connection_k=12, mode="radius")
+rrt_star_options = star.RRTStarOptions(connection_radius=5.0, connection_k=12, mode="radius")
 rrt_star = star.RRTStar(planner, rrt_star_options)
 
 new_path = rrt_star.return_plan()
