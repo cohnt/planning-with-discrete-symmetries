@@ -63,7 +63,7 @@ times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, le
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]
 traj1 = CompositeTrajectory.AlignAndConcatenate(segments)
 
-visualization.draw_graph(meshcat, planner.tree, [0,1], path="symmetry-rrt", color=Rgba(0, 0, 0, 1), linewidth=4.0)
+# visualization.draw_graph(meshcat, planner.tree, [0,1], path="symmetry-rrt", color=Rgba(0, 0, 0, 1), linewidth=4.0)
 
 # Now compare to the plan without symmetries
 
@@ -94,7 +94,7 @@ times = [t_scaling * np.sqrt(Metric2(path2[i-1], path2[i])[0]) for i in range(1,
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path2[i-1], path2[i]]).T) for i in range(1, len(path2))]
 traj2 = CompositeTrajectory.AlignAndConcatenate(segments)
 
-visualization.draw_graph(meshcat, planner2.tree, [0,1], path="baseline-rrt", color=Rgba(0.5, 0, 0, 1), linewidth=4.0)
+# visualization.draw_graph(meshcat, planner2.tree, [0,1], path="baseline-rrt", color=Rgba(0.5, 0, 0, 1), linewidth=4.0)
 
 # Check RRT*
 import src.planners.star as star
