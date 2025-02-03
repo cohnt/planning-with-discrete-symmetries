@@ -157,7 +157,7 @@ def params_to_shape(params : SetupParams):
 
     if isinstance(params.symmetry, symmetry.CyclicGroupSO3):
         # n-Gon Base Pyramid
-        n_sides = param.symmetry.order()
+        n_sides = params.symmetry.order()
         if n_sides == 1:
             raise NotImplementedError # TODO
         elif n_sides == 2:
@@ -178,7 +178,7 @@ def params_to_shape(params : SetupParams):
             raise NotImplementedError # Not planned
     elif isinstance(params.symmetry, symmetry.DihedralGroup):
         # n-Gon Prism
-        n_sides = param.symmetry.order() // 2
+        n_sides = params.symmetry.order() // 2
         if n_sides == 1:
             raise NotImplementedError # TODO
         elif n_sides == 2:
