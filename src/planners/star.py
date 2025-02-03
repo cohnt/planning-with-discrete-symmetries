@@ -16,13 +16,13 @@ class RRTStarOptions:
         assert self.mode in ["radius", "k"]
 
 class RRTStar:
-    def __init__(self, existing_rrt, options):
+    def __init__(self, existing_rrt, options, verbose=False):
         self.rrt = existing_rrt
         self.options = options
 
-        self._rewire_tree()
+        self._rewire_tree(verbose)
 
-    def _rewire_tree(self):
+    def _rewire_tree(self, verbose):
         nodes = self.rrt.nodes()
         dist_sq_mat, targets = self.rrt.Metric.pairwise(nodes)
         dist_mat = np.sqrt(dist_sq_mat)
@@ -31,7 +31,7 @@ class RRTStar:
         self._compute_cost_to_come()
 
         # Incrementally rewire
-        for j in tqdm(range(1, len(self.rrt.tree)), desc="RRT* Rewiring"):
+        for j in tqdm(range(1, len(self.rrt.tree)), desc="RRT* Rewiring", disable=not verbose):
             # Find neighbors
             candidate_dists = dist_mat[j,:j]
             if self.options.mode == "k":
