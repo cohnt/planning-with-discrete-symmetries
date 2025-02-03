@@ -282,14 +282,17 @@ class SO3Interpolate(Interpolate):
 
         quat1 = RotationMatrix(mat1).ToQuaternion().wxyz()
         quat2 = RotationMatrix(mat2).ToQuaternion().wxyz()
-        
-        cos_theta = np.dot(quat1, quat2)
-        theta = np.arccos(np.clip(cos_theta, -1, 1))
-        t1 = np.sin((1 - t) * theta) / np.sin(theta)
-        t2 = np.sin(t * theta) / np.sin(theta)
-        quat_out = t1 * quat1 + t2 * quat2
-        if cos_theta < 0:
-            quat_out *= -1
+
+        if np.linalg.norm(quat1 - quat2) < 1e-10:
+            quat_out = quat1
+        else:
+            cos_theta = np.dot(quat1, quat2)
+            theta = np.arccos(np.clip(cos_theta, -1, 1))
+            t1 = np.sin((1 - t) * theta) / np.sin(theta)
+            t2 = np.sin(t * theta) / np.sin(theta)
+            quat_out = t1 * quat1 + t2 * quat2
+            if cos_theta < 0:
+                quat_out *= -1
 
         new_mat = RotationMatrix(Quaternion(*quat_out)).matrix()
         q_out = t * q2 + (1 - t) * q1
