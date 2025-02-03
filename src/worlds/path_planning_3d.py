@@ -165,7 +165,7 @@ def params_to_shape(params : SetupParams):
         elif n_sides == 3:
             raise NotImplementedError # Not planned -- use a tetrahedron
         elif n_sides == 4:
-            raise NotImplementedError # TODO
+            shape = "pyramids/square_pyramid.sdf"
         elif n_sides == 5:
             shape = "pyramids/pentagonal_pyramid.sdf"
         elif n_sides == 6:
