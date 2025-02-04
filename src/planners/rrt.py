@@ -83,9 +83,7 @@ class RRT:
         if trying_to_reach:
             q_new = q_subgoal
         else:
-            step = q_subgoal - q_near
-            unit_step = step / self.Metric(q_near, q_subgoal)[0]
-            q_new = q_near + self.options.step_size * unit_step
+            q_new = self.Interpolator(q_near, q_subgoal, self.options.step_size / dist_to_subgoal)
 
         if self._maybe_add_and_connect(q_near_idx, q_new):
             if trying_to_reach:
@@ -210,9 +208,7 @@ class BiRRT:
         if trying_to_reach:
             q_new = q_subgoal
         else:
-            step = q_subgoal - q_near
-            unit_step = step / self.Metric(q_near, q_subgoal)[0]
-            q_new = q_near + self.options.step_size * unit_step
+            q_new = self.Interpolator(q_near, q_subgoal, self.options.step_size / dist_to_subgoal)
 
         if self._maybe_add_and_connect(tree, q_near_idx, q_new):
             if trying_to_reach:
