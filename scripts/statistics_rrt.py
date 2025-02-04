@@ -24,17 +24,19 @@ from pydrake.all import (
 meshcat = StartMeshcat()
 
 # User specifies:
-task_space_dimension = 3 # 2 or 3
-G = symmetry.CyclicGroupSO3(5) # Any group. Dimension must match task_space_dimension.
+task_space_dimension = 2 # 2 or 3
+G = symmetry.CyclicGroupSO2(2) # Any group. Dimension must match task_space_dimension.
 dualshape = False # Only needed for platonic solids in 3D
-G_name = "pentagonal pyramid"
-n_worlds = 2
+G_name = "rectangle"
+n_worlds = 1
 n_pairs_per_world = 10
 
 if task_space_dimension == 2:
-    rrt_options = rrt.RRTOptions(max_vertices=5e2, max_iters=1e4, goal_sample_frequency=0.05, stop_at_goal=False)
+    rrt_options = rrt.RRTOptions(max_vertices=5e2, max_iters=1e4, step_size=3.0, goal_sample_frequency=0.05, stop_at_goal=False)
 elif task_space_dimension == 3:
     rrt_options = rrt.RRTOptions(max_vertices=5e2, max_iters=1e4, step_size=1.0, stop_at_goal=False)
+
+planners_verbose = True
 
 # User receives:
 # RRT online runtime improvement
@@ -113,18 +115,22 @@ for random_seed in range(n_worlds):
         if CollisionCheckerWrapper.CheckConfigCollisionFree(q0) and CollisionCheckerWrapper.CheckConfigCollisionFree(q1):
             start_goal_pairs.append((q0, q1))
 
-    for start, goal in tqdm(start_goal_pairs):
+    for start, goal in tqdm(start_goal_pairs, disable=planners_verbose):
         path_lengths.append([])
         runtimes.append([])
 
         # RRT symmetry-unaware and -aware plans
+        full_runtimes = []
+        if planners_verbose:
+            print("World %d, plan %d" % (random_seed, len(runtimes)))
         for planner in [planner_unaware, planner_aware]:
             np.random.seed(random_seed)
             t0 = time.time()
-            path = planner.plan(start, goal)
+            path, dt = planner.plan(start, goal, verbose=planners_verbose, return_time_to_goal=True)
             t1 = time.time()
+            full_runtimes.append(t1 - t0)
+            runtimes[-1].append(dt)
 
-            runtimes[-1].append(t1 - t0)
             if task_space_dimension == 2:
                 path = imacs.UnwrapToContinuousPath2d(planner.Sampler.G, path, planner.Sampler.symmetry_dof_start)
             else:
@@ -141,15 +147,15 @@ for random_seed in range(n_worlds):
         existing_time_indices = [0, 1, 1]
         for rrt_star_options, planner, existing_time_index in zip(symmetry_options, planners, existing_time_indices):
             if path_lengths[-1][existing_time_index] == np.inf:
-                runtimes[-1].append(runtimes[-1][existing_time_index])
+                runtimes[-1].append(full_runtimes[existing_time_index])
                 path_lengths[-1].append(np.inf)
                 continue
 
             t0 = time.time()
-            rrt_star = star.RRTStar(copy.deepcopy(planner), rrt_star_options)
+            rrt_star = star.RRTStar(copy.deepcopy(planner), rrt_star_options, verbose=planners_verbose)
             path = rrt_star.return_plan()
             t1 = time.time()
-            runtimes[-1].append((t1 - t0) + runtimes[-1][existing_time_index]) # Cost includes symmetry-unaware RRT time.
+            runtimes[-1].append((t1 - t0) + full_runtimes[existing_time_index]) # Cost includes symmetry-unaware RRT time.
             if task_space_dimension == 2:
                 path = imacs.UnwrapToContinuousPath2d(planner.Sampler.G, path, planner.Sampler.symmetry_dof_start)
             else:
