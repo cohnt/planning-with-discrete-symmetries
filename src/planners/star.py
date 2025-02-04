@@ -51,7 +51,7 @@ class RRTStar:
             assert len(in_edges) == 1
             best_ij = list(in_edges)[0]
             best_i = best_ij[0]
-            best_cost = self.rrt.tree.nodes[best_i]["cost to come"]
+            best_cost = self.rrt.tree.nodes[best_i]["cost to come"] + dist_mat[best_i, j]
 
             # Determine candidate edges
             candidate_costs = np.array([self.rrt.tree.nodes[i]["cost to come"] + dist_mat[i,j] for i in range(j)])
