@@ -474,7 +474,7 @@ class SO3CollisionCheckerWrapper():
         return new_qs
 
     def CheckConfigCollisionFree(self, q):
-        return self.CheckConfigsCollisionFree(np.array([q]))
+        return self.CheckConfigsCollisionFree(np.array([q]))[0]
 
     def CheckConfigsCollisionFree(self, qs):
         # 9 values needed for SO(3) matrix, but only 4 for the quaternion
