@@ -28,8 +28,9 @@ class RRT:
 
         self.goal_idx = None
 
-    def plan(self, start, goal, verbose=False):
+    def plan(self, start, goal, verbose=False, return_time_to_goal=False):
         t0 = time.time()
+        t1 = None
 
         self.tree = nx.DiGraph()
         self.tree.add_node(0, q=start)
@@ -63,13 +64,21 @@ class RRT:
                         success = self._maybe_add_and_connect(q_new_idx, qj)
                         if success:
                             self.goal_idx = len(self.tree) - 1
+                            t1 = time.time()
                         break
             vertices.update(len(self.tree) - old_tree_size)
 
         if success:
-            return self._path(0, self.goal_idx)
+            out = self._path(0, self.goal_idx)
         else:
-            return []
+            out = []
+
+        if t1 is None:
+            t1 = time.time()
+
+        if return_time_to_goal:
+            out = (out, t1 - t0)
+        return out
 
     def _nearest_idx(self, q_subgoal):
         all_qs = np.array([self.tree.nodes[i]["q"] for i in range(len(self.tree))])
