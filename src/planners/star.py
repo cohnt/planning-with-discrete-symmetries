@@ -68,9 +68,14 @@ class RRTStar:
                     self.rrt.tree.remove_edge(best_i, j)
                     self.rrt.tree.add_edge(candidate_node, j, weight=dist_mat[candidate_node, j], qj=qj)
 
-                    # We need to recompute cost to come. This could be made more efficient
+                    # We need to recompute cost to come.
                     t0 = time.time()
-                    self._compute_cost_to_come()
+                    cost_old = best_cost
+                    cost_new = self.rrt.tree.nodes[candidate_node]["cost to come"] + dist_mat[candidate_node, j]
+                    d_cost = cost_new - cost_old
+                    # Manually include j as a descendant of itself, since we need to update it as well.
+                    for node in nx.descendants(self.rrt.tree, j) | {j}:
+                        self.rrt.tree.nodes[node]["cost to come"] += d_cost
                     t1 = time.time()
                     recomputation_time += t1 - t0
 
