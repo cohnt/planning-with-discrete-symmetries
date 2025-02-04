@@ -1,6 +1,7 @@
 import numpy as np
 import networkx as nx
 from tqdm.auto import tqdm
+import time
 
 import src.planners.rrt as rrt
 
@@ -29,6 +30,9 @@ class RRTStar:
 
         # Compute cost-to-come
         self._compute_cost_to_come()
+
+        overall_start = time.time()
+        recomputation_time = 0
 
         # Incrementally rewire
         for j in tqdm(range(1, len(self.rrt.tree)), desc="RRT* Rewiring", disable=not verbose):
@@ -65,10 +69,18 @@ class RRTStar:
                     self.rrt.tree.add_edge(candidate_node, j, weight=dist_mat[candidate_node, j], qj=qj)
 
                     # We need to recompute cost to come. This could be made more efficient
+                    t0 = time.time()
                     self._compute_cost_to_come()
+                    t1 = time.time()
+                    recomputation_time += t1 - t0
 
                     # Since we went in order, we can break
                     break
+
+        overall_time = time.time() - overall_start
+        if verbose:
+            print("Overall runtime", overall_time)
+            print("Recomputation runtime", recomputation_time)
 
     def _compute_cost_to_come(self):
         path_lengths = nx.shortest_path_length(self.rrt.tree, source=0, weight="weight")
