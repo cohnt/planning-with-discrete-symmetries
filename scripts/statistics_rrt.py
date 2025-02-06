@@ -24,19 +24,19 @@ from pydrake.all import (
 meshcat = StartMeshcat()
 
 # User specifies:
-task_space_dimension = 2 # 2 or 3
-G = symmetry.CyclicGroupSO2(2) # Any group. Dimension must match task_space_dimension.
+task_space_dimension = 3 # 2 or 3
+G = symmetry.CyclicGroupSO3(8) # Any group. Dimension must match task_space_dimension.
 dualshape = False # Only needed for platonic solids in 3D
-G_name = "rectangle"
-n_worlds = 1
+G_name = "octagonal pyramid"
+n_worlds = 3
 n_pairs_per_world = 10
 
 if task_space_dimension == 2:
-    rrt_options = rrt.RRTOptions(max_vertices=5e2, max_iters=1e4, step_size=3.0, goal_sample_frequency=0.05, stop_at_goal=False)
+    rrt_options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, step_size=1.0, goal_sample_frequency=0.05, stop_at_goal=False)
 elif task_space_dimension == 3:
-    rrt_options = rrt.RRTOptions(max_vertices=5e2, max_iters=1e4, step_size=1.0, stop_at_goal=False)
+    rrt_options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, step_size=1.0, goal_sample_frequency=0.05, stop_at_goal=False)
 
-planners_verbose = True
+planners_verbose = False
 
 # User receives:
 # RRT online runtime improvement
@@ -90,6 +90,7 @@ print("RRT* Radius Ambient", rrt_star_radius_original)
 print("RRT* Radius Quotient", rrt_star_radius_quotient)
 
 print("Running comparison for a %s across %d worlds, with %d plans per world" % (G_name, n_worlds, n_pairs_per_world))
+print("Group order: %d" % G.order())
 # The following lists will be populated by sublists [rrt_unaware, rrt_aware, rrt*_unaware, rrt*_aware_even, rrt*_aware_uneven]
 path_lengths = []
 runtimes = []
@@ -186,17 +187,17 @@ def compare(new_idx, old_idx):
 # RRT comparison
 path_improvement, time_improvement = compare(1, 0)
 print("\nRRT Comparison")
-print("Relative path length compared to the baseline: mean %f, std %f, percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime compared to the baseline: mean %f, std %f, percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
+print("Relative runtime compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
 
 # RRT* even comparison
 path_improvement, time_improvement = compare(3, 2)
 print("\nRRT* Comparison (Equal resources)")
-print("Relative path length compared to the baseline: mean %f, std %f, percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime compared to the baseline: mean %f, std %f, percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
+print("Relative runtime compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
 
 # RRT* uneven comparison
 path_improvement, time_improvement = compare(4, 2)
 print("\nRRT* Comparison (Unequal resources)")
-print("Relative path length compared to the baseline: mean %f, std %f, percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime compared to the baseline: mean %f, std %f, percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
+print("Relative runtime compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
