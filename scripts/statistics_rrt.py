@@ -25,9 +25,9 @@ meshcat = StartMeshcat()
 
 # User specifies:
 task_space_dimension = 3 # 2 or 3
-G = symmetry.CyclicGroupSO3(8) # Any group. Dimension must match task_space_dimension.
-dualshape = False # Only needed for platonic solids in 3D
-G_name = "octagonal pyramid"
+G = symmetry.IcosahedralGroup() # Any group. Dimension must match task_space_dimension.
+dualshape = True # Only needed for platonic solids in 3D
+G_name = "Icosahedron"
 n_worlds = 3
 n_pairs_per_world = 10
 
