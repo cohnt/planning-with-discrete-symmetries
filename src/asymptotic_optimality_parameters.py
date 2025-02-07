@@ -1,13 +1,15 @@
 import numpy as np
 from scipy.special import gamma
 
-def knn_rrt(dimension):
+def knn_rrt(dimension, max_samples):
     k_opt = 2 ** (dimension + 1)
     k_opt *= np.e * (1 + (1 / dimension))
+    k_opt *= np.log(max_samples)
     return int(np.ceil(k_opt))
 
-def knn_prm(dimension):
+def knn_prm(dimension, max_samples):
     k_opt = np.e * (1 + (1 / dimension))
+    k_opt *= np.log(max_samples)
     return int(np.ceil(k_opt))
 
 def unit_ball_volume(dimension):
