@@ -23,7 +23,7 @@ class PRM:
         self.CollisionChecker = CollisionChecker
         self.options = options
 
-    def build(self, nodes_in=None):
+    def build(self, nodes_in=None, verbose=False):
         self.graph = nx.DiGraph()
 
         if nodes_in is None:
@@ -33,7 +33,7 @@ class PRM:
 
         # Gather collision-free samples
         nodes = nodes_in.copy()
-        progress_bar = tqdm(total=self.options.max_vertices, desc="Sampling Nodes")
+        progress_bar = tqdm(total=self.options.max_vertices, desc="Sampling Nodes", disable=not verbose)
         while len(nodes) < self.options.max_vertices:
             candidate_nodes = self.Sampler(self.options.max_vertices - len(nodes))
             validity_mask = self.CollisionChecker.CheckConfigsCollisionFree(candidate_nodes)
@@ -72,19 +72,20 @@ class PRM:
             raise NotImplementedError
 
         num_edges = len(edges_to_try)
-        for (i, j), qj in tqdm(edges_to_try.items(), "Checking Edges for Collisions"):
+        for (i, j), qj in tqdm(edges_to_try.items(), "Checking Edges for Collisions", disable=not verbose):
             assert i < j
             self._maybe_connect(i, j, qj, dist=dist_mat[i,j])
 
-        print("Created a roadmap with %d vertices, %d edges, and %d"
-              " connected components." % (len(self.graph),
-                                         self.graph.number_of_edges(),
-                                         len(list(nx.connected_components(self.graph.to_undirected())))))
-        count = 3
-        print("%d largest components: %s" % (
-            count,
-            [len(c) for c in sorted(nx.connected_components(self.graph.to_undirected()), key=len, reverse=True)][:count])
-        )
+        if verbose:
+            print("Created a roadmap with %d vertices, %d edges, and %d"
+                  " connected components." % (len(self.graph),
+                                             self.graph.number_of_edges(),
+                                             len(list(nx.connected_components(self.graph.to_undirected())))))
+            count = 3
+            print("%d largest components: %s" % (
+                count,
+                [len(c) for c in sorted(nx.connected_components(self.graph.to_undirected()), key=len, reverse=True)][:count])
+            )
 
     def plan(self, start, goal):
         # Try to connect the start and goal
