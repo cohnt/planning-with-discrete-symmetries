@@ -3,11 +3,11 @@ from scipy.special import gamma
 
 def knn_rrt(dimension):
     k_opt = 2 ** (dimension + 1)
-    k_opt *= e * (1 + (1 / dimension))
+    k_opt *= np.e * (1 + (1 / dimension))
     return int(np.ceil(k_opt))
 
 def knn_prm(dimension):
-    k_opt = e * (1 + (1 / dimension))
+    k_opt = np.e * (1 + (1 / dimension))
     return int(np.ceil(k_opt))
 
 def unit_ball_volume(dimension):
