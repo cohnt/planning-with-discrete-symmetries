@@ -84,9 +84,11 @@ class PRM:
             raise NotImplementedError
 
         num_edges = len(edges_to_try)
-        for (i, j), qj in tqdm(edges_to_try.items(), "Checking Edges for Collisions", disable=not verbose):
-            assert i > j
-            self._maybe_connect(i, j, qj, dist=dist_mat[i,j])
+        i_in = [i for i, _ in edges_to_try.keys()]
+        j_in = [j for _, j in edges_to_try.keys()]
+        qj_in = [qj for qj in edges_to_try.values()]
+        dist_in = [dist_mat[i,j] for i, j in edges_to_try.keys()]
+        self._maybe_connect_parallel(i_in, j_in, qj_in, dist_in)
 
         if verbose:
             print("Created a roadmap with %d vertices, %d edges, and %d"
@@ -155,6 +157,10 @@ class PRM:
             k = int(np.ceil(k))
             idxs = np.argsort(dists)[:k]
         return idxs, qis[idxs]
+
+    def _maybe_connect_parallel(self, i_list, j_list, qj_list, dist_list):
+        # TODO: parallelize
+        return [self._maybe_connect(i, j, qj, dist) for i, j, qj, dist in zip(i_list, j_list, qj_list, dist_list)]
 
     def _maybe_connect(self, i, j, qj, dist=None):
         q1 = self.graph.nodes[i]["q"]
