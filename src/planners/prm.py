@@ -159,8 +159,15 @@ class PRM:
         return idxs, qis[idxs]
 
     def _maybe_connect_parallel(self, i_list, j_list, qj_list, dist_list):
-        # TODO: parallelize
-        return [self._maybe_connect(i, j, qj, dist) for i, j, qj, dist in zip(i_list, j_list, qj_list, dist_list)]
+        edges = [(self.graph.nodes[i]["q"], qj) for i, qj in zip(i_list, qj_list)]
+        results = self.CollisionChecker.CheckEdgesCollisionFree(edges)
+        for add, i, j, qj, dist in zip(results, i_list, j_list, qj_list, dist_list):
+            if add:
+                self.graph.add_edge(i, j, weight=dist, qj=qj)
+                _, qi = self.Metric(self.graph.nodes[j]["q"], self.graph.nodes[i]["q"])
+                self.graph.add_edge(j, i, weight=dist, qj=qi)
+
+        return results
 
     def _maybe_connect(self, i, j, qj, dist=None):
         q1 = self.graph.nodes[i]["q"]
