@@ -30,10 +30,8 @@ G_name = "triangle"
 n_worlds = 3
 n_pairs_per_world = 100
 
-# Neighbor mode is set in the script
-# radius is set later as well
-# k is checked that it's large enough for asymptotic optimality
-prm_options = prm.PRMOptions(max_vertices=1e3, neighbor_k=26, neighbor_radius=None, neighbor_mode=None)
+# All parameters besides max_vertices are set later in the script.
+prm_options = prm.PRMOptions(max_vertices=1e3, neighbor_k=None, neighbor_radius=None, neighbor_mode=None)
 
 planners_verbose = True
 
@@ -145,11 +143,11 @@ for random_seed in range(n_worlds):
         if CollisionCheckerWrapper.CheckConfigCollisionFree(q0) and CollisionCheckerWrapper.CheckConfigCollisionFree(q1):
             start_goal_pairs.append((q0, q1))
 
-    for start, goal in tqdm(start_goal_pairs, disable=planners_verbose):
+    for count, (start, goal) in enumerate(tqdm(start_goal_pairs, disable=planners_verbose)):
         path_lengths.append([])
 
         if planners_verbose:
-            print("World %d, plan %d" % (random_seed, len(path_lengths)))
+            print("World %d, plan %d" % (random_seed, count))
         for planner in planners:
             path = planner.plan(start, goal)
 
