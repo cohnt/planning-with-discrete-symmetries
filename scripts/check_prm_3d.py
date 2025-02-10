@@ -4,6 +4,7 @@ sys.path.append("..")
 import time
 import numpy as np
 
+import src.asymptotic_optimality_parameters as asymptotic
 import src.planners.imacs as imacs
 import src.planners.prm as prm
 import src.symmetry as symmetry
@@ -25,6 +26,17 @@ G = symmetry.TetrahedralGroup()
 params = path_planning_3d.SetupParams(G, True, limits, 150, 0.7, 0)
 diagram, CollisionChecker = path_planning_3d.build_env(meshcat, params)
 
+c_free_volume = 1
+c_free_volume *= limits[0][1] - limits[0][0]
+c_free_volume *= limits[1][1] - limits[1][0]
+c_free_volume *= asymptotic.s1_volume()
+print("Symmetry-Aware PRM* Minimum Radius:", asymptotic.radius_prm(3, c_free_volume / 3))
+print("Symmetry-Unaware PRM* Minimum Radius:", asymptotic.radius_prm(3, c_free_volume))
+print("KNN-PRM* Minimum k:", asymptotic.knn_prm(3))
+
+options.neighbor_radius = asymptotic.radius_prm(3, c_free_volume)
+options.neighbor_k = asymptotic.knn_prm(3)
+
 sampler_limits_lower = np.zeros(12)
 sampler_limits_upper = np.zeros(12)
 sampler_limits_lower[-3:] = [limits[0][0], limits[1][0], limits[2][0]]
@@ -40,7 +52,7 @@ plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 diagram.ForcedPublish(diagram_context)
 
 np.random.seed(random_seed)
-roadmap.build()
+roadmap.build(verbose=True)
 
 fname = "check_prm_3d_symmetric.pkl"
 roadmap.save(fname)
@@ -69,7 +81,7 @@ CollisionCheckerWrapper = imacs.SO3CollisionCheckerWrapper(CollisionChecker, 12,
 roadmap2 = prm.PRM(Sampler, Metric, Interpolator, CollisionCheckerWrapper, options)
 
 np.random.seed(random_seed)
-roadmap2.build()
+roadmap2.build(verbose=True)
 
 fname = "check_prm_3d_baseline.pkl"
 roadmap2.save(fname)

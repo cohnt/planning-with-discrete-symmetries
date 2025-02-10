@@ -480,6 +480,12 @@ class SO3CollisionCheckerWrapper():
         # 9 values needed for SO(3) matrix, but only 4 for the quaternion
         return self.CollisionChecker.CheckConfigsCollisionFree(self._remap_qs(qs))
 
+    def CheckEdgesCollisionFree(self, edges):
+        n = len(edges)
+        points_remapped = self._remap_qs(edges.reshape(2 * n, -1))
+        edges_remapped = points_remapped.reshape(n, 2, -1)
+        return self.CollisionChecker.CheckEdgesCollisionFree(edges_remapped)
+
     def CheckEdgeCollisionFreeParallel(self, q1, q2):
         new_q1, new_q2 = self._remap_qs(np.array([q1, q2]))
         return self.CollisionChecker.CheckEdgeCollisionFreeParallel(new_q1, new_q2)

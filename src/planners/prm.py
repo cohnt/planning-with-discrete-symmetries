@@ -3,6 +3,7 @@ import networkx as nx
 from tqdm.auto import tqdm
 from src.util import repo_dir
 import pickle
+import time
 
 import src.planners.imacs as imacs
 
@@ -83,12 +84,17 @@ class PRM:
         else:
             raise NotImplementedError
 
-        num_edges = len(edges_to_try)
+        if verbose:
+            print("Checking %d edges for collisions" % len(edges_to_try))
         i_in = [i for i, _ in edges_to_try.keys()]
         j_in = [j for _, j in edges_to_try.keys()]
         qj_in = [qj for qj in edges_to_try.values()]
         dist_in = [dist_mat[i,j] for i, j in edges_to_try.keys()]
+        t0 = time.time()
         self._maybe_connect_parallel(i_in, j_in, qj_in, dist_in)
+        t1 = time.time()
+        if verbose:
+            print("Edges checked in %f seconds" % (t1 - t0))
 
         if verbose:
             print("Created a roadmap with %d vertices, %d edges, and %d"
@@ -159,7 +165,7 @@ class PRM:
         return idxs, qis[idxs]
 
     def _maybe_connect_parallel(self, i_list, j_list, qj_list, dist_list):
-        edges = [(self.graph.nodes[i]["q"], qj) for i, qj in zip(i_list, qj_list)]
+        edges = np.array([(self.graph.nodes[i]["q"], qj) for i, qj in zip(i_list, qj_list)])
         results = self.CollisionChecker.CheckEdgesCollisionFree(edges)
         for add, i, j, qj, dist in zip(results, i_list, j_list, qj_list, dist_list):
             if add:
