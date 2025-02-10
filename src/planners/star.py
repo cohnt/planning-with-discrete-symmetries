@@ -37,6 +37,8 @@ class RRTStar:
         overall_start = time.time()
         recomputation_time = 0
 
+        start_coeff = None
+
         # Incrementally rewire
         for j in tqdm(range(1, len(self.rrt.tree)), desc="RRT* Rewiring", disable=not verbose):
             # Find neighbors
@@ -48,12 +50,20 @@ class RRTStar:
                     k *= np.log(card)
                 k = int(np.ceil(k))
                 partitioned_indices = np.argpartition(candidate_dists, k)
+                if j == 1:
+                    start_coeff = k
+                if j == len(self.rrt.tree) - 1:
+                    end_coeff = k
                 candidate_nodes = partitioned_indices[:k]
             elif self.options.mode == "radius":
                 r = self.options.connection_radius
                 if self.options.scale:
                     r *= (np.log(card) / card) ** (1/dimension)
                     r = min(r, self.rrt.options.step_size)
+                if j == 1:
+                    start_coeff = r
+                if j == len(self.rrt.tree) - 1:
+                    end_coeff = r
                 candidate_nodes = np.where(candidate_dists <= r)[0]
             else:
                 raise(NotImplementedError)
@@ -98,6 +108,8 @@ class RRTStar:
         if verbose:
             print("Overall runtime", overall_time)
             print("Recomputation runtime", recomputation_time)
+            print("Starting coefficient (radius or k)", start_coeff)
+            print("Starting coefficient (radius or k)", end_coeff)
 
     def _compute_cost_to_come(self):
         path_lengths = nx.shortest_path_length(self.rrt.tree, source=0, weight="weight")
