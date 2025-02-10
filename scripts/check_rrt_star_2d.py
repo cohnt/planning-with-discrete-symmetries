@@ -4,6 +4,7 @@ sys.path.append("..")
 import time
 import numpy as np
 
+import src.asymptotic_optimality_parameters as aop
 import src.planners.imacs as imacs
 import src.planners.rrt as rrt
 import src.planners.shortcut as shortcut
@@ -18,7 +19,7 @@ from pydrake.all import (
     Rgba
 )
 
-options = rrt.RRTOptions(max_vertices=750, max_iters=1e4, goal_sample_frequency=0.05, stop_at_goal=False)
+options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, goal_sample_frequency=0.05, stop_at_goal=False, step_size=5.0)
 shortcut_options = shortcut.ShortcutOptions(max_iters=1e2)
 random_seed = 0
 
@@ -98,7 +99,15 @@ traj2 = CompositeTrajectory.AlignAndConcatenate(segments)
 
 # Check RRT*
 import src.planners.star as star
-rrt_star_options = star.RRTStarOptions(connection_radius=5.0, connection_k=12, mode="radius")
+
+c_space_dimension = 3
+c_space_volume = np.prod(np.array(limits)[:,1] - np.array(limits)[:,0]) * aop.s1_volume()
+rrt_star_radius_original = aop.radius_rrt(c_space_dimension, c_space_volume)
+rrt_star_radius_quotient = aop.radius_rrt(c_space_dimension, c_space_volume / G.order())
+rrt_star_options_even = star.RRTStarOptions(connection_radius=rrt_star_radius_original, mode="radius")
+rrt_star_options_uneven = star.RRTStarOptions(connection_radius=rrt_star_radius_quotient, mode="radius")
+
+rrt_star_options = star.RRTStarOptions(connection_radius=rrt_star_radius_original, connection_k=12, mode="radius")
 
 rrt_star = star.RRTStar(planner, rrt_star_options)
 new_path = rrt_star.return_plan()

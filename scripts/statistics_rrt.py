@@ -25,9 +25,9 @@ meshcat = StartMeshcat()
 
 # User specifies:
 task_space_dimension = 3 # 2 or 3
-G = symmetry.IcosahedralGroup() # Any group. Dimension must match task_space_dimension.
+G = symmetry.TetrahedralGroup() # Any group. Dimension must match task_space_dimension.
 dualshape = True # Only needed for platonic solids in 3D
-G_name = "Icosahedron"
+G_name = "tetrahedron"
 n_worlds = 3
 n_pairs_per_world = 10
 
@@ -36,7 +36,7 @@ if task_space_dimension == 2:
 elif task_space_dimension == 3:
     rrt_options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, step_size=1.0, goal_sample_frequency=0.05, stop_at_goal=False)
 
-planners_verbose = False
+planners_verbose = True
 
 # User receives:
 # RRT online runtime improvement

@@ -33,9 +33,9 @@ n_pairs_per_world = 100
 # Neighbor mode is set in the script
 # radius is set later as well
 # k is checked that it's large enough for asymptotic optimality
-prm_options = prm.PRMOptions(max_vertices=3e2, neighbor_k=26, neighbor_radius=None, neighbor_mode=None)
+prm_options = prm.PRMOptions(max_vertices=1e3, neighbor_k=26, neighbor_radius=None, neighbor_mode=None)
 
-planners_verbose = False
+planners_verbose = True
 
 # User receives:
 # RRT online runtime improvement
@@ -82,9 +82,9 @@ else:
 
 prm_star_radius_original = aop.radius_prm(c_space_dimension, c_space_volume)
 prm_star_radius_quotient = aop.radius_prm(c_space_dimension, c_space_volume / G.order())
-prm_star_k = aop.knn_prm(c_space_dimension, prm_options.max_vertices)
+prm_star_k = aop.knn_prm(c_space_dimension)
 
-assert prm_options.neighbor_k >= prm_star_k
+prm_options.neighbor_k = prm_star_k
 prm_options.neighbor_radius = prm_star_radius_original
 
 r_prm_options = copy.deepcopy(prm_options)

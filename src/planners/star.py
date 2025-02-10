@@ -6,10 +6,11 @@ import time
 import src.planners.rrt as rrt
 
 class RRTStarOptions:
-    def __init__(self, connection_radius=5.0, connection_k=12, mode="radius"):
+    def __init__(self, connection_radius=5.0, connection_k=12, mode="radius", scale=True):
         self.connection_radius = connection_radius
         self.connection_k = connection_k
         self.mode = mode
+        self.scale = scale
 
         assert isinstance(self.connection_k, int)
         assert self.connection_radius > 0
@@ -28,6 +29,8 @@ class RRTStar:
         dist_sq_mat, targets = self.rrt.Metric.pairwise(nodes)
         dist_mat = np.sqrt(dist_sq_mat)
 
+        dimension = self.rrt.Sampler.ambient_dim
+
         # Compute cost-to-come
         self._compute_cost_to_come()
 
@@ -37,12 +40,21 @@ class RRTStar:
         # Incrementally rewire
         for j in tqdm(range(1, len(self.rrt.tree)), desc="RRT* Rewiring", disable=not verbose):
             # Find neighbors
+            card = j + 1
             candidate_dists = dist_mat[j,:j]
             if self.options.mode == "k":
-                partitioned_indices = np.argpartition(candidate_dists, self.options.connection_k)
-                candidate_nodes = partitioned_indices[:self.options.connection_k]
+                k = self.options.connection_k
+                if self.options.scale:
+                    k *= np.log(card)
+                k = int(np.ceil(k))
+                partitioned_indices = np.argpartition(candidate_dists, k)
+                candidate_nodes = partitioned_indices[:k]
             elif self.options.mode == "radius":
-                candidate_nodes = np.where(candidate_dists <= self.options.connection_radius)[0]
+                r = self.options.connection_radius
+                if self.options.scale:
+                    r *= (np.log(card) / card) ** (1/dimension)
+                    r = min(r, self.rrt.options.step_size)
+                candidate_nodes = np.where(candidate_dists <= r)[0]
             else:
                 raise(NotImplementedError)
 

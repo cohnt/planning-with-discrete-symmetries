@@ -8,12 +8,13 @@ import src.planners.imacs as imacs
 
 class PRMOptions:
     def __init__(self, neighbor_radius=1e-1, neighbor_k=12, neighbor_mode="k",
-                 check_size=1e-2, max_vertices=1e3):
+                 check_size=1e-2, max_vertices=1e3, scale=True):
         self.neighbor_radius = neighbor_radius
         self.neighbor_k = neighbor_k
         self.neighbor_mode = neighbor_mode # "radius", "k"
         self.check_size = check_size
         self.max_vertices = int(max_vertices)
+        self.scale = scale
 
 class PRM:
     def __init__(self, Sampler, Metric, Interpolator, CollisionChecker, options):
@@ -52,19 +53,30 @@ class PRM:
         dist_mat, targets = self.Metric.pairwise(nodes)
         np.fill_diagonal(dist_mat, np.inf)
 
+        dimension = self.Sampler.ambient_dim
+
         # Pick edges to check.
         edges_to_try = dict() # Keys will be tuples (i, j), values will be j_rep
         if self.options.neighbor_mode == "radius":
             for i in range(0, len(nodes)):
-                for j in range(i + 1, len(nodes)):
-                    if dist_mat[i,j] <= self.options.neighbor_radius:
+                card = i + 1
+                r = self.options.neighbor_radius
+                if self.options.scale:
+                    r *= (np.log(card) / card) ** (1/dimension)
+                for j in range(0, i - 1):
+                    if dist_mat[i,j] <= r:
                         edges_to_try.update({(i, j): targets[i, j]})
         elif self.options.neighbor_mode == "k":
             edge_counts = np.zeros(len(nodes), int)
             for i in range(len(nodes)):
-                j_list = np.argpartition(dist_mat[i], self.options.neighbor_k)[:self.options.neighbor_k]
+                card = i + 1
+                k = self.options.neighbor_k
+                if self.options.scale:
+                    k *= np.log(card)
+                k = int(np.ceil(k))
+                j_list = np.argpartition(dist_mat[i], k)[:k]
                 for j in j_list:
-                    if i < j:
+                    if i > j:
                         edges_to_try.update({(i, j): targets[i, j]})
                     else:
                         edges_to_try.update({(j, i): targets[j, i]})
@@ -73,7 +85,7 @@ class PRM:
 
         num_edges = len(edges_to_try)
         for (i, j), qj in tqdm(edges_to_try.items(), "Checking Edges for Collisions", disable=not verbose):
-            assert i < j
+            assert i > j
             self._maybe_connect(i, j, qj, dist=dist_mat[i,j])
 
         if verbose:
@@ -128,11 +140,20 @@ class PRM:
         dists, qis = self.Metric.pairwise(np.array([q]), all_qs)
         dists = dists.reshape(-1)
         qis = qis.reshape(-1, len(q))
+        card = len(self.graph)
+        dimension = self.Sampler.ambient_dim
         if self.options.neighbor_mode == "radius":
-            num_within_radius = np.sum(dists <= self.options.neighbor_radius)
+            r = self.options.neighbor_radius
+            if self.options.scale:
+                r *= (np.log(card) / card) ** (1/dimension)
+            num_within_radius = np.sum(dists <= r)
             idxs = np.argsort(dists)[:num_within_radius]
         elif self.options.neighbor_mode == "k":
-            idxs = np.argsort(dists)[:self.options.neighbor_k]
+            k = self.options.neighbor_k
+            if self.options.scale:
+                k *= np.log(card)
+            k = int(np.ceil(k))
+            idxs = np.argsort(dists)[:k]
         return idxs, qis[idxs]
 
     def _maybe_connect(self, i, j, qj, dist=None):

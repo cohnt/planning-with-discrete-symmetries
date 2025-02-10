@@ -30,6 +30,10 @@ c_free_volume *= limits[1][1] - limits[1][0]
 c_free_volume *= asymptotic.s1_volume()
 print("Symmetry-Aware PRM* Minimum Radius:", asymptotic.radius_prm(3, c_free_volume / 3))
 print("Symmetry-Unaware PRM* Minimum Radius:", asymptotic.radius_prm(3, c_free_volume))
+print("KNN-PRM* Minimum k:", asymptotic.knn_prm(3))
+
+options.neighbor_radius = asymptotic.radius_prm(3, c_free_volume)
+options.neighbor_k = asymptotic.knn_prm(3)
 
 G = symmetry.CyclicGroupSO2(3)
 Sampler = imacs.SO2SampleUniform(G, 3, 2, [limits[0][0], limits[1][0], 0], [limits[0][1], limits[1][1], 0])
@@ -38,7 +42,7 @@ Interpolator = imacs.SO2Interpolate(G, 3, 2)
 roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 
 np.random.seed(0)
-roadmap.build()
+roadmap.build(verbose=True)
 
 fname = "check_prm_2d_symmetric.pkl"
 roadmap.save(fname)
@@ -107,7 +111,7 @@ Interpolator = imacs.SO2Interpolate(G, 3, 2)
 roadmap = prm.PRM(Sampler, Metric, Interpolator, CollisionChecker, options)
 
 np.random.seed(0)
-roadmap.build()
+roadmap.build(verbose=True)
 
 fname = "check_prm_2d_baseline.pkl"
 roadmap.save(fname)
@@ -142,7 +146,8 @@ for t in np.linspace(traj2.start_time(), traj2.end_time(), 400):
 # Alternate visualizing each one
 
 while True:
-    for traj in [traj1, traj2]:
+    for traj, name in zip([traj1, traj2], ["Symmetry-Aware PRM*", "Symmetry-Unaware PRM*"]):
+        print(name)
         time.sleep(3)
         dt = traj.end_time() - traj.start_time()
         dt /= 400
