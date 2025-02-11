@@ -4,12 +4,13 @@ from tqdm.auto import tqdm
 from src.util import repo_dir
 import pickle
 import time
+import gc
 
 import src.planners.imacs as imacs
 
 class PRMOptions:
     def __init__(self, neighbor_radius=1e-1, neighbor_k=12, neighbor_mode="k",
-                 check_size=1e-2, max_vertices=1e3, scale=True, max_ram_pairwise_gb=50):
+                 check_size=1e-2, max_vertices=1e3, scale=True, max_ram_pairwise_gb=10):
         self.neighbor_radius = neighbor_radius
         self.neighbor_k = neighbor_k
         self.neighbor_mode = neighbor_mode # "radius", "k"
@@ -27,10 +28,16 @@ class PRM:
         self.options = options
 
         # Compute anticipated memory usage of pairwise distance computations
-        expected_bytes = 1 # Number of bytes per sample-squared
-        expected_bytes *= self.Sampler.G.order()
-        expected_bytes *= 3 ** 2 # 3x3 matrices for SO(3)
-        expected_bytes *= 8 # Numpy uses doubles, which need 8 bytes
+        expected_bytes1 = 1 # Number of bytes per sample-squared from the distance matrix
+        expected_bytes1 *= self.Sampler.G.order()
+        expected_bytes1 *= 3 ** 2 # 3x3 matrices for SO(3)
+        expected_bytes1 *= 8 # Numpy uses doubles, which need 8 bytes
+
+        expected_bytes2 = 1 # Number of bytes per sample-squared from the targets matrix
+        expected_bytes2 *= self.Sampler.ambient_dim
+        expected_bytes2 *= 8
+
+        expected_bytes = expected_bytes1 + expected_bytes2
         max_ram = self.options.max_ram_pairwise_gb * (10 ** 9) # Allow using up to 50GB of RAM for pairwise distance computations.
 
         # samples^2 * mult = max_ram -> samples = sqrt(max_ram / mult)
@@ -84,14 +91,18 @@ class PRM:
                 if i == j:
                     block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max])
                     dist_mat[i:i_max, i:i_max] = block_dist
-                    if targets_too_large:
+                    if not targets_too_large:
                         targets[i:i_max, i:i_max] = block_targets
+                    del block_dist, block_targets
+                    gc.collect()
                 else:
                     j_max = j + self.pairwise_max_block_size
                     block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max], nodes[j:j_max])
                     dist_mat[i:i_max, j:j_max] = block_dist
-                    if targets_too_large:
+                    if not targets_too_large:
                         targets[i:i_max, j:j_max] = block_targets
+                    del block_dist, block_targets
+                    gc.collect()
         progress_bar.close()
 
         np.fill_diagonal(dist_mat, np.inf)
