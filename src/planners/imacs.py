@@ -1,5 +1,6 @@
 import numpy as np
 import src.symmetry
+import gc
 
 from pydrake.all import (
     RotationMatrix,
@@ -201,10 +202,15 @@ class SO3DistanceSq(DistanceSq):
             + np.sum(remaining_q2s**2, axis=1)              # Shape (m,)
             - 2 * np.dot(remaining_q1s, remaining_q2s.T)    # Shape (n, m)
         )
+        del remaining_q1s
+        del remaining_q2s
+        gc.collect()
 
         R1s = np_q1s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
         R2s = np_q2s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
         orbits = np.array([self.G.orbit(R2) for R2 in R2s])  # Shape (m, orbit_len, 3, 3)
+        del R2s
+        gc.collect()
 
         # Compute pairwise R = m1 @ m2^T for all combinations of matrices1 and orbits
         R = R1s[:, None, None] @ np.transpose(orbits, (0, 1, 3, 2))  # Shape: (N, M, orbit_size, 3, 3)
@@ -229,16 +235,26 @@ class SO3DistanceSq(DistanceSq):
 
         orbits_repeated = np.repeat(orbits[None, :, :, :, :], N, axis=0)  # Shape: (N, M, orbit_size, 3, 3)
         orbits_repeated = np.repeat(orbits[None, :, :, :, :], R1s.shape[0], axis=0)  # Shape: (N, M, orbit_size, 3, 3)
+        del R1s
+        del orbits
+        gc.collect()
 
         closest_orbits = np.take_along_axis(orbits_repeated, min_indices_expanded, axis=2).squeeze(2)  # Shape: (N, M, 3, 3)
+        del orbits_repeated
+        gc.collect()
 
         # Combine with the Euclidean distance components
         distances = self.symmetry_weight * distances ** 2 + remaining_dists_squared
+
+        del remaining_dists_squared
+        gc.collect()
 
         # Fix how nearest entries are listed
         nearest_entries = np.tile(np_q2s, (len(q1s), 1, 1))
 
         nearest_entries[:, :, self.symmetry_dof_start:symmetry_dof_end] = closest_orbits.reshape(len(q1s), len(q2s), 9)
+        del closest_orbits
+        gc.collect()
 
         return distances, nearest_entries
 

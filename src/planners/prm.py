@@ -38,6 +38,7 @@ class PRM:
         expected_bytes2 *= 8
 
         expected_bytes = expected_bytes1 + expected_bytes2
+        expected_bytes *= 2 # Empirically, the overhead works out to about twice the memory needed to store the output
         max_ram = self.options.max_ram_pairwise_gb * (10 ** 9) # Allow using up to 50GB of RAM for pairwise distance computations.
 
         # samples^2 * mult = max_ram -> samples = sqrt(max_ram / mult)
