@@ -23,15 +23,15 @@ from pydrake.all import (
 meshcat = StartMeshcat()
 
 # User specifies:
-task_space_dimension = 2 # 2 or 3
-G = symmetry.CyclicGroupSO2(3) # Any group. Dimension must match task_space_dimension.
+task_space_dimension = 3 # 2 or 3
+G = symmetry.TetrahedralGroup() # Any group. Dimension must match task_space_dimension.
 dualshape = False # Only needed for platonic solids in 3D
-G_name = "triangle"
+G_name = "tetrahedron"
 n_worlds = 3
 n_pairs_per_world = 100
 
 # All parameters besides max_vertices are set later in the script.
-prm_options = prm.PRMOptions(max_vertices=1000 * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None)
+prm_options = prm.PRMOptions(max_vertices=1000 * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=50)
 
 planners_verbose = True
 
