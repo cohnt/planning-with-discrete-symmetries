@@ -116,14 +116,14 @@ for random_seed in range(n_worlds):
         if CollisionCheckerWrapper.CheckConfigCollisionFree(q0) and CollisionCheckerWrapper.CheckConfigCollisionFree(q1):
             start_goal_pairs.append((q0, q1))
 
-    for start, goal in tqdm(start_goal_pairs, disable=planners_verbose):
+    for count, (start, goal) in enumerate(tqdm(start_goal_pairs, disable=planners_verbose)):
         path_lengths.append([])
         runtimes.append([])
 
         # RRT symmetry-unaware and -aware plans
         full_runtimes = []
         if planners_verbose:
-            print("World %d, plan %d" % (random_seed, len(runtimes)))
+            print("World %d, plan %d" % (random_seed, count))
         for planner in [planner_unaware, planner_aware]:
             np.random.seed(random_seed)
             t0 = time.time()
