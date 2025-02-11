@@ -308,7 +308,7 @@ def build_env(meshcat, params : SetupParams):
 
     model = diagram
     robot_model_instances = [diagram.plant().GetModelInstanceByName("robot")]
-    edge_step_size = 0.01
+    edge_step_size = 0.1
     collision_checker = SceneGraphCollisionChecker(model=model, robot_model_instances=robot_model_instances, edge_step_size=edge_step_size)
 
     meshcat.SetProperty("/Grid", "visible", False)

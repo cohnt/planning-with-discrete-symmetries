@@ -127,7 +127,7 @@ class PRM:
         self._maybe_connect_parallel(i_in, j_in, qj_in, dist_in)
         t1 = time.time()
         if verbose:
-            print("Edges checked in %f seconds" % (t1 - t0))
+            print("Edges checked in %f seconds (about %d edges per second)." % ((t1 - t0), int(len(edges_to_try) / (t1 - t0))))
 
         if verbose:
             print("Created a roadmap with %d vertices, %d edges, and %d"
