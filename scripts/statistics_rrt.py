@@ -24,11 +24,11 @@ from pydrake.all import (
 meshcat = StartMeshcat()
 
 # User specifies:
-task_space_dimension = 3 # 2 or 3
-G = symmetry.TetrahedralGroup() # Any group. Dimension must match task_space_dimension.
+task_space_dimension = 2 # 2 or 3
+G = symmetry.CyclicGroupSO2(3) # Any group. Dimension must match task_space_dimension.
 dualshape = True # Only needed for platonic solids in 3D
-G_name = "tetrahedron"
-n_worlds = 3
+G_name = "triangle"
+n_worlds = 1
 n_pairs_per_world = 10
 
 if task_space_dimension == 2:
@@ -36,7 +36,9 @@ if task_space_dimension == 2:
 elif task_space_dimension == 3:
     rrt_options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, step_size=1.0, goal_sample_frequency=0.05, stop_at_goal=False)
 
-planners_verbose = True
+planners_verbose = False
+
+overall_t0 = time.time()
 
 # User receives:
 # RRT online runtime improvement
@@ -201,3 +203,6 @@ path_improvement, time_improvement = compare(4, 2)
 print("\nRRT* Comparison (Unequal resources)")
 print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
 print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+
+overall_t1 = time.time()
+print("Total script runtime", (overall_t1 - overall_t0))
