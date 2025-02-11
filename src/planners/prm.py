@@ -141,12 +141,19 @@ class PRM:
         else:
             raise NotImplementedError
 
+        del targets
+        gc.collect()
+
         if verbose:
             print("Checking %d edges for collisions" % len(edges_to_try))
         i_in = [i for i, _ in edges_to_try.keys()]
         j_in = [j for _, j in edges_to_try.keys()]
         qj_in = [qj for qj in edges_to_try.values()]
         dist_in = [dist_mat[i,j] for i, j in edges_to_try.keys()]
+
+        del dist_mat
+        gc.collect()
+
         t0 = time.time()
         self._maybe_connect_parallel(i_in, j_in, qj_in, dist_in)
         t1 = time.time()
