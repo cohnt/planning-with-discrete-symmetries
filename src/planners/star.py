@@ -109,7 +109,7 @@ class RRTStar:
             print("Overall runtime", overall_time)
             print("Recomputation runtime", recomputation_time)
             print("Starting coefficient (radius or k)", start_coeff)
-            print("Starting coefficient (radius or k)", end_coeff)
+            print("Ending coefficient (radius or k)", end_coeff)
 
     def _compute_cost_to_come(self):
         path_lengths = nx.shortest_path_length(self.rrt.tree, source=0, weight="weight")

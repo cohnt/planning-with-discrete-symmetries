@@ -179,33 +179,33 @@ mask_knn_uneven = np.logical_and(*np.isfinite(path_lengths[:,[2,5]]).T)
 
 def compare(new_idx, old_idx, mask):
     path_lengths_to_compare = path_lengths[mask]
-    path_improvement = np.divide(path_lengths_to_compare[:,new_idx], path_lengths_to_compare[:,old_idx]) # New / Old
+    path_improvement = np.divide(path_lengths_to_compare[:,old_idx], path_lengths_to_compare[:,new_idx]) # Old / New
 
     runtimes_to_compare = runtimes.copy()
-    time_improvement = np.divide(runtimes_to_compare[:,new_idx], runtimes_to_compare[:,old_idx]) # New / Old
+    time_improvement = np.divide(runtimes_to_compare[:,old_idx], runtimes_to_compare[:,new_idx]) # Old / New
 
     return path_improvement, time_improvement
 
 # KNN-PRM even comparison
 path_improvement, time_improvement = compare(3, 2, mask_knn_even)
 print("\nKNN-PRM Comparison (Equal Resources)")
-print("Relative path length compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
+print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
 
 # Radius-PRM even comparison
 path_improvement, time_improvement = compare(1, 0, mask_radius_even)
 print("\nRadius-PRM Comparison (Equal Resources)")
-print("Relative path length compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
+print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
 
 # KNN-PRM unveven comparison
 path_improvement, time_improvement = compare(5, 2, mask_knn_uneven)
 print("\nKNN-PRM Comparison (Unequal Resources)")
-print("Relative path length compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
+print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
 
 # Radius-PRM unveven comparison
 path_improvement, time_improvement = compare(4, 0, mask_radius_uneven)
 print("\nRadius-PRM Comparison (Unequal Resources)")
-print("Relative path length compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime compared to the baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
+print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
