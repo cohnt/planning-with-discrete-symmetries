@@ -24,10 +24,10 @@ from pydrake.all import (
 meshcat = StartMeshcat()
 
 # User specifies:
-task_space_dimension = 2 # 2 or 3
-G = symmetry.CyclicGroupSO2(3) # Any group. Dimension must match task_space_dimension.
+task_space_dimension = 3 # 2 or 3
+G = symmetry.IcosahedralGroup() # Any group. Dimension must match task_space_dimension.
 dualshape = True # Only needed for platonic solids in 3D
-G_name = "triangle"
+G_name = "icosahedron"
 n_worlds = 1
 n_pairs_per_world = 10
 

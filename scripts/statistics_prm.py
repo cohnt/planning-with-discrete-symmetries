@@ -24,10 +24,10 @@ meshcat = StartMeshcat()
 
 # User specifies:
 task_space_dimension = 3 # 2 or 3
-G = symmetry.TetrahedralGroup() # Any group. Dimension must match task_space_dimension.
+G = symmetry.IcosahedralGroup() # Any group. Dimension must match task_space_dimension.
 dualshape = False # Only needed for platonic solids in 3D
-G_name = "tetrahedron"
-n_worlds = 3
+G_name = "icosahedron"
+n_worlds = 1
 n_pairs_per_world = 100
 
 # All parameters besides max_vertices are set later in the script.

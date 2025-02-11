@@ -60,7 +60,15 @@ class PRM:
 
         # Compute pairwise distances.
         dist_mat = np.zeros((len(nodes), len(nodes)))
-        targets = np.zeros((len(nodes), len(nodes), self.Sampler.ambient_dim))
+
+        targets_too_large = False
+        try:
+            targets = np.zeros((len(nodes), len(nodes), self.Sampler.ambient_dim))
+        except:
+            if verbose:
+                print("Warning: cannot precompute all edge targets due to memory limitations.")
+            targets = None
+            targets_too_large = True
 
         n_blocks = (int(len(nodes) / self.pairwise_max_block_size) + 1) ** 2
         if n_blocks == 1:
@@ -76,15 +84,16 @@ class PRM:
                 if i == j:
                     block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max])
                     dist_mat[i:i_max, i:i_max] = block_dist
-                    targets[i:i_max, i:i_max] = block_targets
+                    if targets_too_large:
+                        targets[i:i_max, i:i_max] = block_targets
                 else:
                     j_max = j + self.pairwise_max_block_size
                     block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max], nodes[j:j_max])
                     dist_mat[i:i_max, j:j_max] = block_dist
-                    targets[i:i_max, j:j_max] = block_targets
+                    if targets_too_large:
+                        targets[i:i_max, j:j_max] = block_targets
         progress_bar.close()
 
-        # dist_mat, targets = self.Metric.pairwise(nodes)
         np.fill_diagonal(dist_mat, np.inf)
 
         dimension = self.Sampler.ambient_dim
@@ -99,7 +108,8 @@ class PRM:
                     r *= (np.log(card) / card) ** (1/dimension)
                 for j in range(0, i - 1):
                     if dist_mat[i,j] <= r:
-                        edges_to_try.update({(i, j): targets[i, j]})
+                        target = self.Metric(nodes[i], nodes[j])[1] if targets_too_large else targets[i, j]
+                        edges_to_try.update({(i, j): target})
         elif self.options.neighbor_mode == "k":
             edge_counts = np.zeros(len(nodes), int)
             for i in range(len(nodes)):
@@ -111,9 +121,11 @@ class PRM:
                 j_list = np.argpartition(dist_mat[i], k)[:k]
                 for j in j_list:
                     if i > j:
-                        edges_to_try.update({(i, j): targets[i, j]})
+                        target = self.Metric(nodes[i], nodes[j])[1] if targets_too_large else targets[i, j]
+                        edges_to_try.update({(i, j): target})
                     else:
-                        edges_to_try.update({(j, i): targets[j, i]})
+                        target = self.Metric(nodes[j], nodes[i])[1] if targets_too_large else targets[j, i]
+                        edges_to_try.update({(j, i): target})
         else:
             raise NotImplementedError
 
