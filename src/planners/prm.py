@@ -113,18 +113,23 @@ class PRM:
         # Pick edges to check.
         edges_to_try = dict() # Keys will be tuples (i, j), values will be j_rep
         if self.options.neighbor_mode == "radius":
+            progress_bar = tqdm(total=int(0.5 * len(nodes) * (len(nodes) - 1)), desc="Finding Radius-Nearest Neighbors", disable=not verbose)
             for i in range(0, len(nodes)):
                 card = i + 1
                 r = self.options.neighbor_radius
                 if self.options.scale:
                     r *= (np.log(card) / card) ** (1/dimension)
                 for j in range(0, i - 1):
+                    progress_bar.update(1)
                     if dist_mat[i,j] <= r:
                         target = self.Metric(nodes[i], nodes[j])[1] if targets_too_large else targets[i, j]
                         edges_to_try.update({(i, j): target})
+            progress_bar.close()
         elif self.options.neighbor_mode == "k":
             edge_counts = np.zeros(len(nodes), int)
+            progress_bar = tqdm(total=len(nodes), desc="Finding k-Nearest Neighbors", disable=not verbose)
             for i in range(len(nodes)):
+                progress_bar.update(1)
                 card = i + 1
                 k = self.options.neighbor_k
                 if self.options.scale:
@@ -138,6 +143,7 @@ class PRM:
                     else:
                         target = self.Metric(nodes[j], nodes[i])[1] if targets_too_large else targets[j, i]
                         edges_to_try.update({(j, i): target})
+            progress_bar.close()
         else:
             raise NotImplementedError
 
