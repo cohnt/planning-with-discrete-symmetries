@@ -166,6 +166,41 @@ class SO2DistanceSq(DistanceSq):
 
         return self.symmetry_weight * min_distances ** 2 + remaining_dists_squared, nearest_entries
 
+class SO2DistanceSqMultiple():
+    def __init__(self, G, ambient_dim, symmetry_dof_starts, symmetry_weight=1.0):
+        # Assume each symmetry_dof_start is the 3rd entry
+        self.starts = [symmetry_dof_start - 2 for symmetry_dof_start in symmetry_dof_starts]
+        self.distance_sq = [SO2DistanceSq(G, 3, 2, symmetry_weight) for _ in symmetry_dof_starts]
+
+    def __call__(self, q1, q2):
+        dist = 0
+        out = q2.copy()
+        for start, dsq in zip(self.starts, self.distance_sq):
+            foo, bar = dsq(q1[start:start+3], q2[start:start+3])
+            dist += foo
+            out[start:start+3] = bar
+
+        return dist, out
+
+    def pairwise(self, q1s, q2s=None):
+        if q2s is None:
+            q2s = q1s
+
+        distances = np.zeros((len(q1s), len(q2s)))
+        nearest_entries = np.tile(q2s, (len(q1s), 1, 1))
+
+        for start, dsq in zip(self.starts, self.distance_sq):
+            foo, bar = dsq.pairwise(q1s[:,start:start+3], q2s[:,start:start+3])
+            distances += foo
+            nearest_entries[:,:,start:start+3] = bar
+
+        return distances, nearest_entries
+
+    def path_length(self, path):
+        # Path should already be unwrapped!
+        segment_lengths = [np.sqrt(self(path[i], path[i-1])[0]) for i in range(1, len(path))]
+        return np.sum(segment_lengths)
+
 class SO3DistanceSq(DistanceSq):
     def __call__(self, q1, q2):
         assert len(q1) == self.ambient_dim
@@ -282,6 +317,19 @@ class SO2Interpolate(Interpolate):
             else:
                 return t * (q2 + vec) + (1 - t) * q1
 
+class SO2InterpolateMultiple():
+    def __init__(self, G, ambient_dim, symmetry_dof_starts):
+        # Assume each symmetry_dof_start is the 3rd entry
+        self.starts = [symmetry_dof_start - 2 for symmetry_dof_start in symmetry_dof_starts]
+        self.interpolators = [SO2Interpolate(G, 3, 2) for _ in symmetry_dof_starts]
+
+    def __call__(self, q1, q2, t):
+        assert 0 <= t and t <= 1
+        out = np.zeros_like(q2)
+        for start, interpolator in zip(self.starts, self.interpolators):
+            out[start:start+3] = interpolator(q1[start:start+3], q2[start:start+3], t)
+        return out
+
 class SO3Interpolate(Interpolate):
     def __call__(self, q1, q2, t):
         assert 0 <= t <= 1
@@ -333,8 +381,14 @@ class SampleUniform():
 class SO2SampleUniform(SampleUniform):
     def __init__(self, G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper):
         super().__init__(G, ambient_dim, symmetry_dof_start, limits_lower, limits_upper)
-        self.limits_lower[self.symmetry_dof_start] = -np.pi
-        self.limits_upper[self.symmetry_dof_start] = np.pi
+
+        if isinstance(self.symmetry_dof_start, list):
+            for foo in self.symmetry_dof_start:
+                self.limits_lower[foo] = -np.pi
+                self.limits_upper[foo] = np.pi
+        else:
+            self.limits_lower[self.symmetry_dof_start] = -np.pi
+            self.limits_upper[self.symmetry_dof_start] = np.pi
 
     def __call__(self, n):
         return np.random.uniform(low=self.limits_lower, high=self.limits_upper, size=(n, self.ambient_dim))
@@ -422,6 +476,47 @@ def UnwrapToContinuousPath2d(G, path, symmetry_idx):
             print(dtheta_old, dtheta_new)
             import pdb
             pdb.set_trace()
+
+    return new_path
+
+def UnwrapToContinuousPath2dMultiple(G, path, symmetry_idxs):
+    if len(path) == 0:
+        return []
+
+    new_path = [path[0][0].copy(), path[0][1].copy()]
+    for start, end in path[1:]:
+        new_path.append(end.copy())
+
+        for symmetry_idx in symmetry_idxs:
+            dtheta_old = end[symmetry_idx] - start[symmetry_idx]
+            mat_old = theta_to_so2(new_path[-2][symmetry_idx])
+            mat_new = theta_to_so2(start[symmetry_idx])
+            
+            assert G.equivalent(mat_old, mat_new)
+            
+            orbited = G.orbit(mat_new)
+            dists = np.linalg.norm(orbited - mat_old, axis = (1, 2))
+            best_new = orbited[np.argmin(dists)]
+
+            # tf @ mat_new = best_new, and SO(2) means the inverse is the transpose
+            tf = best_new @ mat_new.T
+            theta_next = end[symmetry_idx]
+            mat_next = theta_to_so2(theta_next)
+            theta_next = so2_to_theta(tf @ mat_next)
+
+            new_path[-1][symmetry_idx] = theta_next
+            new_path[-1][symmetry_idx] = WrapTheta2d(G, new_path[-2][symmetry_idx], new_path[-1][symmetry_idx])
+
+        # while new_path[-1][symmetry_idx] >= new_path[-2][symmetry_idx] + (np.pi / G.order()):
+        #     new_path[-1][symmetry_idx] -= 2 * np.pi / G.order()
+        # while new_path[-1][symmetry_idx] <= new_path[-2][symmetry_idx] - (np.pi / G.order()):
+        #     new_path[-1][symmetry_idx] += 2 * np.pi / G.order()
+
+            dtheta_new = new_path[-1][symmetry_idx] - new_path[-2][symmetry_idx]
+            if np.abs(dtheta_new - dtheta_old) > 1e-5:
+                print(dtheta_old, dtheta_new)
+                import pdb
+                pdb.set_trace()
 
     return new_path
 
