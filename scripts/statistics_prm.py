@@ -4,8 +4,8 @@ sys.path.append("..")
 import copy
 import time
 import numpy as np
-
 from tqdm import tqdm
+import argparse
 
 import src.asymptotic_optimality_parameters as aop
 import src.planners.imacs as imacs
@@ -22,13 +22,62 @@ from pydrake.all import (
 
 meshcat = StartMeshcat()
 
-# User specifies:
-task_space_dimension = 3 # 2 or 3
-G = symmetry.IcosahedralGroup() # Any group. Dimension must match task_space_dimension.
-dualshape = False # Only needed for platonic solids in 3D
-G_name = "icosahedron"
-n_worlds = 1
-n_pairs_per_world = 100
+parser = argparse.ArgumentParser(
+    prog="statistics_rrt.py",
+    description="Measure statistics for the RRT planner in a certain domain.")
+
+parser.add_argument("--shape", type=str, required=True)
+# Shape must be one of "polygon", "pyramid", "prism", "tetrahedron", "cube", "octahedron", "dodecahedron", "icosahedron"
+
+parser.add_argument("--n_sides", type=int, required=False)
+# Only required if shape is polygon, pyramid, or prism
+
+parser.add_argument("--n_worlds", type=int, default=10)
+parser.add_argument("--n_pairs_per_world", type=int, default=100)
+
+args = parser.parse_args()
+if args.shape == "polygon":
+    task_space_dimension = 2
+    G = symmetry.CyclicGroupSO2(args.n_sides)
+    G_name = str(args.n_sides) + "-" + args.shape
+elif args.shape == "pyramid":
+    task_space_dimension = 3
+    G = symmetry.CyclicGroupSO3(args.n_sides)
+    G_name = str(args.n_sides) + "-" + args.shape
+    dualshape = False # Ignored
+elif args.shape == "prism":
+    task_space_dimension = 3
+    G = symmetry.DihedralGroup(args.n_sides)
+    G_name = str(args.n_sides) + "-" + args.shape
+    dualshape = False # Ignored
+elif args.shape == "tetrahedron":
+    task_space_dimension = 3
+    G = symmetry.TetrahedralGroup()
+    G_name = args.shape
+    dualshape = False # Ignored
+elif args.shape == "cube":
+    task_space_dimension = 3
+    G = symmetry.OctahedralGroup()
+    G_name = args.shape
+    dualshape = False
+elif args.shape == "octahedron":
+    task_space_dimension = 3
+    G = symmetry.OctahedralGroup()
+    G_name = args.shape
+    dualshape = True
+elif args.shape == "dodecahedron":
+    task_space_dimension = 3
+    G = symmetry.IcosahedralGroup()
+    G_name = args.shape
+    dualshape = False
+elif args.shape == "icosahedron":
+    task_space_dimension = 3
+    G = symmetry.IcosahedralGroup()
+    G_name = args.shape
+    dualshape = True
+
+n_worlds = args.n_worlds
+n_pairs_per_world = args.n_pairs_per_world
 
 # All parameters besides max_vertices are set later in the script.
 prm_options = prm.PRMOptions(max_vertices=500 * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
