@@ -182,7 +182,7 @@ def draw_boundaries(meshcat, limits):
         end=ends
     )
 
-def build_env(meshcat, params : SetupParams):
+def build_env(meshcat, params : SetupParams, n_copies=1):
     if params.n_sides == 1:
         raise NotImplementedError # TODO
     elif params.n_sides == 2:
@@ -202,13 +202,15 @@ def build_env(meshcat, params : SetupParams):
     else:
         raise NotImplementedError # Not planned
 
-    directives_str = f"""directives:
+    directives_str = "directives:"
+    for i in range(n_copies):
+        directives_str += f"""
 - add_model:
-    name: robot
+    name: robot{i:d}
     file: package://symmetries/models/{shape}
 - add_weld:
     parent: world
-    child: robot::base
+    child: robot{i:d}::base
 """
 
     tris = alphashape_make_obstacles(params.limits,
@@ -243,7 +245,7 @@ def build_env(meshcat, params : SetupParams):
     diagram = builder.Build()
 
     model = diagram
-    robot_model_instances = [diagram.plant().GetModelInstanceByName("robot")]
+    robot_model_instances = [diagram.plant().GetModelInstanceByName("robot%d" % i) for i in range(n_copies)]
     edge_step_size = 0.1
     collision_checker = SceneGraphCollisionChecker(model=model, robot_model_instances=robot_model_instances, edge_step_size=edge_step_size)
 
@@ -274,17 +276,17 @@ if __name__ == "__main__":
 
     limits = [[0, 20], [0, 20]]
     params = SetupParams(3, limits, 200, 1, 0)
-    diagram, collision_checker = build_env(meshcat, params)
+    diagram, collision_checker = build_env(meshcat, params, n_copies=3)
 
     diagram_context = diagram.CreateDefaultContext()
     plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
 
-    diagram.plant().SetPositions(plant_context, [10, 10, 0])
+    diagram.plant().SetPositions(plant_context, [10, 10, 0, 5, 5, 0, 0, 0, 0])
     diagram.ForcedPublish(diagram_context)
     time.sleep(5)
 
     while True:
         for i in range(100):
-            diagram.plant().SetPositions(plant_context, [i / 100. * 20, i / 100. * 10, i / 100. * 2 * np.pi])
-            diagram.ForcedPublish(diagram_context)
+    #         diagram.plant().SetPositions(plant_context, [i / 100. * 20, i / 100. * 10, i / 100. * 2 * np.pi])
+    #         diagram.ForcedPublish(diagram_context)
             time.sleep(0.1)
