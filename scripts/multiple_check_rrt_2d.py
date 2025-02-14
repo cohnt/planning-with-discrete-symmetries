@@ -16,20 +16,21 @@ from pydrake.all import (
     CompositeTrajectory
 )
 
-options = rrt.RRTOptions(max_vertices=1e4, max_iters=1e4, step_size=2.0, goal_sample_frequency=0.01)
-shortcut_options = shortcut.ShortcutOptions(max_iters=1e2)
+options = rrt.RRTOptions(max_vertices=2e4, max_iters=1e4, step_size=1.0, goal_sample_frequency=0.01)
+shortcut_options = shortcut.ShortcutOptions(max_iters=1e3)
 
 meshcat = StartMeshcat()
 
-n_copies = 3
+use_birrt = True
+n_copies = 4
 q0 = np.array([0.01, 0.01, 0,
+               19.9, 0.01, 0,
+               19.9, 19.9, 0,
+               0.01, 19.9, 0])[:3*n_copies]
+q1 = np.array([19.9, 0.01, 0,
                19.9, 19.9, 0,
                0.01, 19.9, 0,
-               19.9, 0.01, 0])[:3*n_copies]
-q1 = np.array([19.9, 19.9, np.pi,
-               0.01, 0.01, np.pi,
-               19.9, 0.01, np.pi,
-               0.01, 19.9, np.pi])[:3*n_copies]
+               0.01, 0.01, 0])[:3*n_copies]
 
 limits = [[0, 20], [0, 20]]
 params = path_planning_2d.SetupParams(3, limits, 125, 1.25, 0)
@@ -45,8 +46,10 @@ G = symmetry.CyclicGroupSO2(3)
 Sampler = imacs.SO2SampleUniform(G, cspace_dim, symmetry_indices, limits_lower, limits_upper)
 Metric = imacs.SO2DistanceSqMultiple(G, cspace_dim, symmetry_indices)
 Interpolator = imacs.SO2InterpolateMultiple(G, cspace_dim, symmetry_indices)
-# planner = rrt.BiRRT(Sampler, Metric, Interpolator, CollisionChecker, options)
-planner = rrt.RRT(Sampler, Metric, Interpolator, CollisionChecker, options)
+if use_birrt:
+    planner = rrt.BiRRT(Sampler, Metric, Interpolator, CollisionChecker, options)
+else:
+    planner = rrt.RRT(Sampler, Metric, Interpolator, CollisionChecker, options)
 shortcutter = shortcut.Shortcut(Metric, Interpolator, CollisionChecker, shortcut_options)
 
 diagram_context = diagram.CreateDefaultContext()
@@ -83,8 +86,10 @@ G = symmetry.CyclicGroupSO2(1)
 Sampler = imacs.SO2SampleUniform(G, cspace_dim, symmetry_indices, limits_lower, limits_upper)
 Metric = imacs.SO2DistanceSqMultiple(G, cspace_dim, symmetry_indices)
 Interpolator = imacs.SO2InterpolateMultiple(G, cspace_dim, symmetry_indices)
-# planner = rrt.BiRRT(Sampler, Metric, Interpolator, CollisionChecker, options)
-planner = rrt.RRT(Sampler, Metric, Interpolator, CollisionChecker, options)
+if use_birrt:
+    planner = rrt.BiRRT(Sampler, Metric, Interpolator, CollisionChecker, options)
+else:
+    planner = rrt.RRT(Sampler, Metric, Interpolator, CollisionChecker, options)
 shortcutter = shortcut.Shortcut(Metric, Interpolator, CollisionChecker, shortcut_options)
 
 assert CollisionChecker.CheckConfigCollisionFree(q0)
