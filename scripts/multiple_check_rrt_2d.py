@@ -40,7 +40,7 @@ limits_lower = [limits[0][0], limits[1][0], 0] * n_copies
 limits_upper = [limits[0][1], limits[1][1], 0] * n_copies
 
 cspace_dim = 3 * n_copies
-symmetry_indices = [2, 5, 8, 11][:n_copies]
+symmetry_indices = symmetry_indices = list(range(2, 3*n_copies, 3))
 
 G = symmetry.CyclicGroupSO2(3)
 Sampler = imacs.SO2SampleUniform(G, cspace_dim, symmetry_indices, limits_lower, limits_upper)
