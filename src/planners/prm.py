@@ -248,7 +248,7 @@ class PRM:
     def _maybe_connect(self, i, j, qj, dist=None):
         q1 = self.graph.nodes[i]["q"]
         q2 = qj
-        if isinstance(self.Sampler, imacs.SO2SampleUniform):
+        if isinstance(self.Sampler, imacs.SO2SampleUniform) and not isinstance(self.Sampler.symmetry_dof_start, list):
             if np.abs(q2[self.Sampler.symmetry_dof_start] - q1[self.Sampler.symmetry_dof_start]) > np.pi / self.Sampler.G.order():
                 import pdb
                 pdb.set_trace()
