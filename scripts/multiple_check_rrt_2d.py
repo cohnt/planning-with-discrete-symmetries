@@ -27,13 +27,13 @@ q0 = np.array([0.01, 0.01, 0,
                19.9, 0.01, 0,
                19.9, 19.9, 0,
                0.01, 19.9, 0])[:3*n_copies]
-q1 = np.array([19.9, 0.01, 0,
-               19.9, 19.9, 0,
-               0.01, 19.9, 0,
-               0.01, 0.01, 0])[:3*n_copies]
+q1 = np.array([19.9, 0.01, np.pi,
+               19.9, 19.9, np.pi,
+               0.01, 19.9, np.pi,
+               0.01, 0.01, np.pi])[:3*n_copies]
 
 limits = [[0, 20], [0, 20]]
-params = path_planning_2d.SetupParams(3, limits, 125, 1.25, 0)
+params = path_planning_2d.SetupParams(3, limits, 50, 0.75, 0)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params, n_copies=n_copies)
 
 limits_lower = [limits[0][0], limits[1][0], 0] * n_copies
@@ -104,7 +104,7 @@ for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
     assert np.abs(path[i-1][2] - path[i][2]) <= np.pi
 
-print("SE(2)/G path length:", Metric.path_length(path))
+print("Baseline path length:", Metric.path_length(path))
 t_scaling = 1/4
 times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]
@@ -120,10 +120,11 @@ for t in np.linspace(traj2.start_time(), traj2.end_time(), 400):
 # Alternate visualizing each one
 
 while True:
-    for traj in [traj1, traj2]:
+    for traj, name in zip([traj1, traj2], ["symmetry aware", "symmetry unaware"]):
         time.sleep(3)
         dt = traj.end_time() - traj.start_time()
         dt /= 400
+        print(name)
         for t in np.linspace(traj.start_time(), traj.end_time(), 400):
             diagram.plant().SetPositions(plant_context, traj.value(t).flatten())
             diagram.ForcedPublish(diagram_context)
