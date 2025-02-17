@@ -67,9 +67,10 @@ for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
     assert np.abs(path[i-1][2] - path[i][2]) <= np.pi
 
+one_object_metric = imacs.SO2DistanceSq(G, 3, 2)
 print("SE(2)/G path length:", Metric.path_length(path))
 t_scaling = 1/4
-times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
+times = [t_scaling * np.sqrt(np.max([one_object_metric(path[i-1][j-2:j+1], path[i][j-2:j+1])[0] for j in symmetry_indices])) for i in range(1, len(path))]
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]
 traj1 = CompositeTrajectory.AlignAndConcatenate(segments)
 
@@ -104,9 +105,10 @@ for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
     assert np.abs(path[i-1][2] - path[i][2]) <= np.pi
 
+one_object_metric = imacs.SO2DistanceSq(G, 3, 2)
 print("Baseline path length:", Metric.path_length(path))
 t_scaling = 1/4
-times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
+times = [t_scaling * np.sqrt(np.max([one_object_metric(path[i-1][j-2:j+1], path[i][j-2:j+1])[0] for j in symmetry_indices])) for i in range(1, len(path))]
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]
 traj2 = CompositeTrajectory.AlignAndConcatenate(segments)
 
