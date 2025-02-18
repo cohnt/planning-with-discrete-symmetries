@@ -79,10 +79,11 @@ class PRM:
             targets_too_large = True
 
         n_blocks = (int(len(nodes) / self.pairwise_max_block_size) + 1) ** 2
-        if n_blocks == 1:
-            print("Computing pairwise distances in a single block")
-        else:
-            print("Using %dx%d blocks for pairwise distance computations" % (self.pairwise_max_block_size, self.pairwise_max_block_size))
+        if verbose:
+            if n_blocks == 1:
+                print("Computing pairwise distances in a single block")
+            else:
+                print("Using %dx%d blocks for pairwise distance computations" % (self.pairwise_max_block_size, self.pairwise_max_block_size))
         progress_bar = tqdm(total=n_blocks, desc="Pairwise Distance Blocks", disable=not verbose)
         for i in range(0, len(nodes), self.pairwise_max_block_size):
             i_max = i + self.pairwise_max_block_size

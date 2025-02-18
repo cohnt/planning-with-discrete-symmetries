@@ -82,7 +82,7 @@ n_pairs_per_world = args.n_pairs_per_world
 # All parameters besides max_vertices are set later in the script.
 prm_options = prm.PRMOptions(max_vertices=500 * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
 
-planners_verbose = True
+planners_verbose = False
 
 overall_t0 = time.time()
 
@@ -158,7 +158,7 @@ print("Group order: %d" % G.order())
 #                                                    radius_prm_aware_uneven, knn_prm_aware_uneven]
 path_lengths = [] # Will be shape (n_worlds * n_pairs, n_planners)
 runtimes = [] # Will be shape (n_worlds, n_planners)
-for random_seed in range(n_worlds):
+for random_seed in tqdm(range(n_worlds), disable=planners_verbose):
     params.seed = random_seed
     if task_space_dimension == 2:
         diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params)
