@@ -8,16 +8,18 @@ import src.planners.imacs as imacs
 import src.planners.rrt as rrt
 import src.planners.shortcut as shortcut
 import src.symmetry as symmetry
+import src.visualization as visualization
 import src.worlds.path_planning_2d as path_planning_2d
 
 from pydrake.all import (
     StartMeshcat,
     PiecewisePolynomial,
-    CompositeTrajectory
+    CompositeTrajectory,
+    Rgba
 )
 
 options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, goal_sample_frequency=0.05)
-shortcut_options = shortcut.ShortcutOptions(max_iters=1e2)
+shortcut_options = shortcut.ShortcutOptions(max_iters=1e3)
 
 meshcat = StartMeshcat()
 
@@ -46,6 +48,8 @@ np.random.seed(0)
 path = planner.plan(q0, q1, verbose=True)
 path = shortcutter.shortcut(path, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
+
+visualization.draw_path(meshcat, path, [0,1], "rrt_aware", 1.0, Rgba(0, 1, 0, 1))
 
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
@@ -83,6 +87,8 @@ np.random.seed(0)
 path = planner.plan(q0, q1, verbose=True)
 path = shortcutter.shortcut(path, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
+
+visualization.draw_path(meshcat, path, [0, 1], "rrt_unaware", 1.0, Rgba(1, 0, 0, 1))
 
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])

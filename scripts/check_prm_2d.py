@@ -8,15 +8,17 @@ import src.asymptotic_optimality_parameters as asymptotic
 import src.planners.imacs as imacs
 import src.planners.prm as prm
 import src.symmetry as symmetry
+import src.visualization as visualization
 import src.worlds.path_planning_2d as path_planning_2d
 
 from pydrake.all import (
     StartMeshcat,
     PiecewisePolynomial,
-    CompositeTrajectory
+    CompositeTrajectory,
+    Rgba
 )
 
-options = prm.PRMOptions(max_vertices=5e2, neighbor_k=12, neighbor_radius=5e0, neighbor_mode="radius")
+options = prm.PRMOptions(max_vertices=3e2, neighbor_k=12, neighbor_radius=5e0, neighbor_mode="k")
 
 meshcat = StartMeshcat()
 
@@ -85,6 +87,8 @@ assert CollisionChecker.CheckConfigCollisionFree(q1)
 path = roadmap.plan(q0, q1)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
+visualization.draw_path(meshcat, path, [0,1], "prm_aware", 1.0, Rgba(0, 1, 0, 1))
+
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
     assert np.abs(path[i-1][2] - path[i][2]) <= np.pi
@@ -125,6 +129,8 @@ assert CollisionChecker.CheckConfigCollisionFree(q1)
 
 path = roadmap.plan(q0, q1)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
+
+visualization.draw_path(meshcat, path, [0,1], "prm_unaware", 1.0, Rgba(1, 0, 0, 1))
 
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])

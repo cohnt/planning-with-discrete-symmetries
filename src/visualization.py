@@ -19,3 +19,12 @@ def draw_graph(meshcat, graph, indices, path="rrt", linewidth=1.0, color=Rgba(0,
         end=ends,
         line_width=linewidth,
         rgba=color)
+
+def draw_path(meshcat, path_vertices, indices, path="rrt", linewidth=1.0, color=Rgba(0, 0, 0, 1)):
+    graph = nx.DiGraph()
+    for i, v in enumerate(path_vertices):
+        graph.add_node(i, q=v)
+    for i in range(1, len(path_vertices)):
+        graph.add_edge(i-1, i)
+
+    draw_graph(meshcat, graph, indices, path, linewidth, color)
