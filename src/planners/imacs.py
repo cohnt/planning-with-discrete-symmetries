@@ -546,9 +546,9 @@ def UnwrapToContinuousPathSO3(G, path, symmetry_dof_start):
 
     return new_path
 
-def SO3PathToDrakeSlerpTraj(Metric, path, symmetry_dof_start):
+def SO3PathToDrakeSlerpTraj(Metric, path, symmetry_dof_start, time_scaling=1/4):
     assert len(path) > 1
-    times = [np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
+    times = [time_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
 
     symmetry_dof_end = symmetry_dof_start + 9
     mats = np.asarray(path)[:,symmetry_dof_start:symmetry_dof_end]
