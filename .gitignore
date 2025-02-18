@@ -2,3 +2,5 @@
 
 models/dynamically_generated/*
 data/*
+
+**/*.log*
