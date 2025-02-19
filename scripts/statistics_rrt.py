@@ -35,6 +35,7 @@ parser.add_argument("--n_sides", type=int, required=False)
 
 parser.add_argument("--n_worlds", type=int, default=10)
 parser.add_argument("--n_pairs_per_world", type=int, default=100)
+parser.add_argument("--rrt_nodes_max", type=int, default=1000)
 
 args = parser.parse_args()
 if args.shape == "polygon":
@@ -81,9 +82,9 @@ n_worlds = args.n_worlds
 n_pairs_per_world = args.n_pairs_per_world
 
 if task_space_dimension == 2:
-    rrt_options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, step_size=1.0, goal_sample_frequency=0.05, stop_at_goal=False)
+    rrt_options = rrt.RRTOptions(max_vertices=args.rrt_nodes_max, max_iters=1e4, step_size=5.0, goal_sample_frequency=0.05, stop_at_goal=False)
 elif task_space_dimension == 3:
-    rrt_options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, step_size=1.0, goal_sample_frequency=0.05, stop_at_goal=False)
+    rrt_options = rrt.RRTOptions(max_vertices=args.rrt_nodes_max, max_iters=1e4, step_size=5.0, goal_sample_frequency=0.05, stop_at_goal=False)
 
 planners_verbose = False
 
