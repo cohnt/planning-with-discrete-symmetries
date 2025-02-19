@@ -34,6 +34,7 @@ parser.add_argument("--n_sides", type=int, required=False)
 
 parser.add_argument("--n_worlds", type=int, default=10)
 parser.add_argument("--n_pairs_per_world", type=int, default=100)
+parser.add_argument("--prm_nodes_min", type=int, default=1000)
 
 args = parser.parse_args()
 if args.shape == "polygon":
@@ -80,7 +81,7 @@ n_worlds = args.n_worlds
 n_pairs_per_world = args.n_pairs_per_world
 
 # All parameters besides max_vertices are set later in the script.
-prm_options = prm.PRMOptions(max_vertices=1000 * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
+prm_options = prm.PRMOptions(max_vertices=args.prm_nodes_min * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
 
 planners_verbose = False
 
