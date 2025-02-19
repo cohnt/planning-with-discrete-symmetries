@@ -80,7 +80,7 @@ n_worlds = args.n_worlds
 n_pairs_per_world = args.n_pairs_per_world
 
 # All parameters besides max_vertices are set later in the script.
-prm_options = prm.PRMOptions(max_vertices=500 * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
+prm_options = prm.PRMOptions(max_vertices=1000 * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
 
 planners_verbose = False
 
