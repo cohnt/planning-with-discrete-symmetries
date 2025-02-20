@@ -27,6 +27,6 @@ echo "[supercloud_launch.sh] Number of Worlds: $NWORLDS"
 echo "[supercloud_launch.sh] Number of Pairs Per World: $NPAIRS"
 echo "[supercloud_launch.sh] Maximum Dimension: $MAXDIMENSION"
 
-for i in $(seq 1 $MAXDIMENSION);
+for i in $(seq 3 3 $MAXDIMENSION);
 do python3 scripts/statistics_multiple_prm.py --dimension=$i --n_sides=$NSIDES --n_worlds=$NWORLDS --n_pairs_per_world=$NPAIRS
 done
