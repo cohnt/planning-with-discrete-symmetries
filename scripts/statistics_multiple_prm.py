@@ -150,8 +150,8 @@ def compare(new_idx, old_idx, mask):
 # KNN-PRM even comparison
 path_improvement, time_improvement = compare(0, 1, mask_knn_even)
 print("\nKNN-PRM Comparison (Equal Resources)")
-print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement < 1).sum() / len(path_improvement)))
-print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement < 1).sum() / len(time_improvement)))
+print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
+print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
 
 overall_t1 = time.time()
 print("Total script runtime", (overall_t1 - overall_t0))
