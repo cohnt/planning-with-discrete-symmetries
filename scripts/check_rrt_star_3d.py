@@ -99,7 +99,8 @@ new_traj = imacs.SO3PathToDrakeSlerpTraj(Metric, new_path, 0)
 
 print("SE(2)/G RRT* path length:", Metric.path_length(new_path))
 
-visualization.draw_path(meshcat, new_path, [9, 10, 11], path="rrt_star_aware", color=Rgba(0, 1, 0, 1))
+linewidth = 0.15
+visualization.draw_path(meshcat, new_path, [9, 10, 11], linewidth=linewidth, path="rrt_star_aware", color=Rgba(0, 1, 0, 1))
 
 rrt_star2 = star.RRTStar(planner2, rrt_star_options)
 new_path2 = rrt_star2.return_plan()
@@ -108,12 +109,15 @@ new_traj2 = imacs.SO3PathToDrakeSlerpTraj(Metric2, new_path2, 0)
 
 print("Bsaeline RRT* path length:", Metric2.path_length(new_path2))
 
-visualization.draw_path(meshcat, new_path2, [9, 10, 11], path="rrt_star_unaware", color=Rgba(1, 0, 0, 1))
+visualization.draw_path(meshcat, new_path2, [9, 10, 11], linewidth=linewidth, path="rrt_star_unaware", color=Rgba(0, 0, 1, 1))
 
 while True:
     for traj, name in zip([new_traj, new_traj2], ["Symmetry-Aware RRT*", "Symmetry-Unaware RRT*"]):
-        time.sleep(3)
+        time.sleep(1.5)
         print("%s path" % name)
+        diagram.plant().SetPositions(plant_context, traj.value(traj.start_time()).flatten())
+        diagram.ForcedPublish(diagram_context)
+        time.sleep(1.5)
         dt = traj.end_time() - traj.start_time()
         dt /= 400
         for t in np.linspace(traj.start_time(), traj.end_time(), 400):

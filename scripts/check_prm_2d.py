@@ -87,7 +87,8 @@ assert CollisionChecker.CheckConfigCollisionFree(q1)
 path = roadmap.plan(q0, q1)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
-visualization.draw_path(meshcat, path, [0,1], "prm_aware", 1.0, Rgba(0, 1, 0, 1))
+linewidth = 0.1
+visualization.draw_path(meshcat, path, [0,1], "prm_aware", linewidth, Rgba(0, 1, 0, 1))
 
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
@@ -130,7 +131,7 @@ assert CollisionChecker.CheckConfigCollisionFree(q1)
 path = roadmap.plan(q0, q1)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
-visualization.draw_path(meshcat, path, [0,1], "prm_unaware", 1.0, Rgba(1, 0, 0, 1))
+visualization.draw_path(meshcat, path, [0,1], "prm_unaware", linewidth, Rgba(0, 0, 1, 1))
 
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
@@ -153,8 +154,11 @@ for t in np.linspace(traj2.start_time(), traj2.end_time(), 400):
 
 while True:
     for traj, name in zip([traj1, traj2], ["Symmetry-Aware PRM*", "Symmetry-Unaware PRM*"]):
+        time.sleep(1.5)
         print(name)
-        time.sleep(3)
+        diagram.plant().SetPositions(plant_context, traj.value(traj.start_time()).flatten())
+        diagram.ForcedPublish(diagram_context)
+        time.sleep(1.5)
         dt = traj.end_time() - traj.start_time()
         dt /= 400
         for t in np.linspace(traj.start_time(), traj.end_time(), 400):
