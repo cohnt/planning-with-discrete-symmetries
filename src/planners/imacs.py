@@ -110,12 +110,12 @@ class SO2DistanceSq(DistanceSq):
         if q2s is None:
             q2s = q1s
 
-        np_q1s = np.asarray(q1s)
-        np_q2s = np.asarray(q2s)
+        q1s = np.asarray(q1s)
+        q2s = np.asarray(q2s)
 
         # Euclidean components
-        remaining_q1s = np.delete(np_q1s, self.symmetry_dof_start, axis=1)
-        remaining_q2s = np.delete(np_q2s, self.symmetry_dof_start, axis=1)
+        remaining_q1s = np.delete(q1s, self.symmetry_dof_start, axis=1)
+        remaining_q2s = np.delete(q2s, self.symmetry_dof_start, axis=1)
         remaining_dists_squared = (
             np.sum(remaining_q1s**2, axis=1, keepdims=True)  # Shape (n, 1)
             + np.sum(remaining_q2s**2, axis=1)              # Shape (m,)
@@ -123,8 +123,8 @@ class SO2DistanceSq(DistanceSq):
         )
 
         # Symmetric components
-        thetas1 = np_q1s[:, self.symmetry_dof_start]
-        thetas2 = np_q2s[:, self.symmetry_dof_start]
+        thetas1 = q1s[:, self.symmetry_dof_start]
+        thetas2 = q2s[:, self.symmetry_dof_start]
         mats1 = theta_to_so2(thetas1).T
         mats2 = theta_to_so2(thetas2).T
 
@@ -158,10 +158,10 @@ class SO2DistanceSq(DistanceSq):
         nearest_thetas_old = nearest_thetas.copy()
 
         # Wrap the thetas around if necessary
-        nearest_thetas = WrapTheta2dVectorized(self.G, np_q1s[:,self.symmetry_dof_start], nearest_thetas_old)
+        nearest_thetas = WrapTheta2dVectorized(self.G, q1s[:,self.symmetry_dof_start], nearest_thetas_old)
 
         # Assign theta values correctly
-        nearest_entries = np.tile(np_q2s, (len(q1s), 1, 1))
+        nearest_entries = np.tile(q2s, (len(q1s), 1, 1))
         nearest_entries[:, :, self.symmetry_dof_start] = nearest_thetas
 
         return self.symmetry_weight * min_distances ** 2 + remaining_dists_squared, nearest_entries
@@ -224,14 +224,16 @@ class SO3DistanceSq(DistanceSq):
         if q2s is None:
             q2s = q1s
 
-        np_q1s = np.asarray(q1s)
-        np_q2s = np.asarray(q2s)
+        if not isinstance(q1s, np.ndarray):
+            q1s = np.asarray(q1s)
+        if not isinstance(q2s, np.ndarray):
+            q2s = np.asarray(q2s)
 
         symmetry_dof_end = self.symmetry_dof_start + 9
 
         # Euclidean components
-        remaining_q1s = np.delete(np_q1s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
-        remaining_q2s = np.delete(np_q2s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
+        remaining_q1s = np.hstack((q1s[:, :self.symmetry_dof_start], q1s[:, symmetry_dof_end:]))
+        remaining_q2s = np.hstack((q2s[:, :self.symmetry_dof_start], q2s[:, symmetry_dof_end:]))
         remaining_dists_squared = (
             np.sum(remaining_q1s**2, axis=1, keepdims=True)  # Shape (n, 1)
             + np.sum(remaining_q2s**2, axis=1)              # Shape (m,)
@@ -241,8 +243,8 @@ class SO3DistanceSq(DistanceSq):
         del remaining_q2s
         gc.collect()
 
-        R1s = np_q1s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
-        R2s = np_q2s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
+        R1s = q1s[:,self.symmetry_dof_start:symmetry_dof_end].view(np.float64).reshape(-1, 3, 3)
+        R2s = q2s[:,self.symmetry_dof_start:symmetry_dof_end].view(np.float64).reshape(-1, 3, 3)
         orbits = R2s[:, None] @ self.G.matrices # Shape (m, orbit_len, 3, 3)
         del R2s
         gc.collect()
@@ -268,7 +270,7 @@ class SO3DistanceSq(DistanceSq):
         orbit_indices = np.arange(orbit_size)
         min_indices_expanded = min_indices[:, :, None, None, None]  # Shape: (N, M, 1, 1)
 
-        orbits_repeated = np.repeat(orbits[None, :, :, :, :], R1s.shape[0], axis=0)  # Shape: (N, M, orbit_size, 3, 3)
+        orbits_repeated = np.broadcast_to(orbits, (R1s.shape[0], *orbits.shape)) # Shape: (N, M, orbit_size, 3, 3)
         del R1s
         del orbits
         gc.collect()
@@ -284,7 +286,7 @@ class SO3DistanceSq(DistanceSq):
         gc.collect()
 
         # Fix how nearest entries are listed
-        nearest_entries = np.tile(np_q2s, (len(q1s), 1, 1))
+        nearest_entries = q2s[None, :, :].repeat(len(q1s), axis=0)
 
         nearest_entries[:, :, self.symmetry_dof_start:symmetry_dof_end] = closest_orbits.reshape(len(q1s), len(q2s), 9)
         del closest_orbits
