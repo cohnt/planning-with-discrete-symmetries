@@ -243,7 +243,7 @@ class SO3DistanceSq(DistanceSq):
 
         R1s = np_q1s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
         R2s = np_q2s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
-        orbits = np.array([self.G.orbit(R2) for R2 in R2s])  # Shape (m, orbit_len, 3, 3)
+        orbits = R2s[:, None] @ self.G.matrices # Shape (m, orbit_len, 3, 3)
         del R2s
         gc.collect()
 

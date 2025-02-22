@@ -111,6 +111,7 @@ class TetrahedralGroup(SymmetryGroupSO3Base):
             self.matrices.append(AngleAxis(np.pi,
                     axis / np.linalg.norm(axis)).rotation())
         assert len(self.matrices) == 12
+        self.matrices = np.array(self.matrices)
 
 class OctahedralGroup(SymmetryGroupSO3Base):
     def __init__(self):
@@ -130,6 +131,7 @@ class OctahedralGroup(SymmetryGroupSO3Base):
                         if np.linalg.det(mat) > 0:
                             self.matrices.append(mat)
         assert len(self.matrices) == 24
+        self.matrices = np.array(self.matrices)
 
 class IcosahedralGroup(SymmetryGroupSO3Base):
     def __init__(self):
@@ -219,6 +221,7 @@ class IcosahedralGroup(SymmetryGroupSO3Base):
                     axis / np.linalg.norm(axis)).rotation())
 
         assert len(self.matrices) == 60
+        self.matrices = np.array(self.matrices)
 
 class SymmetryGroupSO2Base(SymmetryGroupBase):
     def __init__(self):
