@@ -268,7 +268,6 @@ class SO3DistanceSq(DistanceSq):
         orbit_indices = np.arange(orbit_size)
         min_indices_expanded = min_indices[:, :, None, None, None]  # Shape: (N, M, 1, 1)
 
-        orbits_repeated = np.repeat(orbits[None, :, :, :, :], N, axis=0)  # Shape: (N, M, orbit_size, 3, 3)
         orbits_repeated = np.repeat(orbits[None, :, :, :, :], R1s.shape[0], axis=0)  # Shape: (N, M, orbit_size, 3, 3)
         del R1s
         del orbits
