@@ -49,7 +49,8 @@ path = planner.plan(q0, q1, verbose=True)
 path = shortcutter.shortcut(path, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
-visualization.draw_path(meshcat, path, [0,1], "rrt_aware", 1.0, Rgba(0, 1, 0, 1))
+linewidth = 0.1
+visualization.draw_path(meshcat, path, [0,1], "rrt_aware", linewidth, Rgba(0, 1, 0, 1))
 
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
@@ -88,13 +89,13 @@ path = planner.plan(q0, q1, verbose=True)
 path = shortcutter.shortcut(path, verbose=True)
 path = imacs.UnwrapToContinuousPath2d(G, path, 2)
 
-visualization.draw_path(meshcat, path, [0, 1], "rrt_unaware", 1.0, Rgba(1, 0, 0, 1))
+visualization.draw_path(meshcat, path, [0, 1], "rrt_unaware", linewidth, Rgba(1, 0, 0, 1))
 
 for i in range(1, len(path)):
     # print(path[i-1][2], path[i][2])
     assert np.abs(path[i-1][2] - path[i][2]) <= np.pi
 
-print("SE(2)/G path length:", Metric.path_length(path))
+print("Baseline path length:", Metric.path_length(path))
 t_scaling = 1/4
 times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, len(path))]
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]
