@@ -1,6 +1,7 @@
 import numpy as np
 import src.symmetry
 import gc
+import numba
 
 from pydrake.all import (
     RotationMatrix,
@@ -227,38 +228,90 @@ class SO3DistanceSq(DistanceSq):
         np_q1s = np.asarray(q1s)
         np_q2s = np.asarray(q2s)
 
-        symmetry_dof_end = self.symmetry_dof_start + 9
+        return SO3_pairwise(np_q1s, np_q2s, self.symmetry_dof_start, self.G.matrices, self.symmetry_weight)
+
+@numba.njit(fastmath=True)
+def SO3_pairwise(q1s, q2s, symmetry_dof_start, G_matrices, symmetry_weight):
+        symmetry_dof_end = symmetry_dof_start + 9
 
         # Euclidean components
-        remaining_q1s = np.delete(np_q1s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
-        remaining_q2s = np.delete(np_q2s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
+        remaining_q1s = np.hstack((q1s[:, :symmetry_dof_start], q1s[:, symmetry_dof_end:]))
+        remaining_q2s = np.hstack((q2s[:, :symmetry_dof_start], q2s[:, symmetry_dof_end:]))
+        remaining_dot_product = np.dot(remaining_q1s, remaining_q2s.T)  # matrix multiplication (dot product)
         remaining_dists_squared = (
-            np.sum(remaining_q1s**2, axis=1, keepdims=True)  # Shape (n, 1)
-            + np.sum(remaining_q2s**2, axis=1)              # Shape (m,)
-            - 2 * np.dot(remaining_q1s, remaining_q2s.T)    # Shape (n, m)
+            np.sum(remaining_q1s**2, axis=1).reshape(-1, 1)  # Shape (n, 1)
+            + np.sum(remaining_q2s**2, axis=1)                # Shape (m,)
+            - 2 * remaining_dot_product                      # Shape (n, m)
         )
-        del remaining_q1s
-        del remaining_q2s
-        gc.collect()
 
-        R1s = np_q1s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
-        R2s = np_q2s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
-        orbits = R2s[:, None] @ self.G.matrices # Shape (m, orbit_len, 3, 3)
-        del R2s
-        gc.collect()
+        # Ensure q1s and q2s are contiguous before reshaping
+        R1s = np.ascontiguousarray(q1s[:, symmetry_dof_start:symmetry_dof_end]).reshape(-1, 3, 3)
+        R2s = np.ascontiguousarray(q2s[:, symmetry_dof_start:symmetry_dof_end]).reshape(-1, 3, 3)
+        
+        # Explicitly expand R2s to match the shape required for broadcasting
+        R2s_expanded = np.reshape(R2s, (R2s.shape[0], 1, 3, 3))  # Shape: (m, 1, 3, 3)
+        
+        m, _, _, _ = R2s_expanded.shape  # Shape of R2s_expanded is (m, 1, 3, 3)
+        orbit_len, _, _ = G_matrices.shape  # Shape of G_matrices is (orbit_len, 3, 3)
 
-        # Compute pairwise R = m1 @ m2^T for all combinations of matrices1 and orbits
-        R = R1s[:, None, None] @ np.transpose(orbits, (0, 1, 3, 2))  # Shape: (N, M, orbit_size, 3, 3)
+        # Initialize an empty array to store the result
+        orbits = np.zeros((m, orbit_len, 3, 3))
 
-        # Compute the cosine of the angle for each pair
-        cos_theta = (np.trace(R, axis1=-2, axis2=-1) - 1) / 2  # Shape: (N, M, orbit_size)
+        # Perform the matrix multiplication
+        for i in range(m):
+            for j in range(orbit_len):
+                for k in range(3):
+                    for l in range(3):
+                        orbits[i, j, k, l] = np.sum(R2s_expanded[i, 0, k, :] * G_matrices[j, :, l])
+
+        # Reshape R1s to (N, 1, 1, 3, 3)
+        R1s_expanded = np.reshape(R1s, (R1s.shape[0], 1, 1, 3, 3))
+
+        # Transpose orbits to match the required shape for matrix multiplication
+        orbits_transposed = np.transpose(orbits, (0, 1, 3, 2))  # Shape (m, orbit_len, 3, 3)
+        
+        # Assuming R1s_expanded has shape (N, 1, 1, 3, 3) and orbits_transposed has shape (m, orbit_len, 3, 3)
+        # We will manually perform the matrix multiplication
+
+        # Initialize the result array
+        R_shape = (R1s_expanded.shape[0], orbits_transposed.shape[0], orbits_transposed.shape[1], 3, 3)
+        R = np.empty(R_shape, dtype=np.float64)
+
+        # Perform the matrix multiplication manually
+        for i in range(R1s_expanded.shape[0]):  # Loop over the N dimension
+            for j in range(orbits_transposed.shape[0]):  # Loop over the m dimension
+                for k in range(orbits_transposed.shape[1]):  # Loop over the orbit_len dimension
+                    # Matrix multiplication of the corresponding matrices
+                    R[i, j, k] = np.dot(R1s_expanded[i, 0, 0], orbits_transposed[j, k])
+
+        # Now R will have the shape (N, M, orbit_size, 3, 3) with the result
+        
+        # Manually compute the trace along the last two axes
+        cos_theta = np.empty(R.shape[:-2], dtype=np.float64)
+
+        for i in range(R.shape[0]):  # Loop over the N dimension
+            for j in range(R.shape[1]):  # Loop over the M dimension
+                for k in range(R.shape[2]):  # Loop over the orbit_len dimension
+                    # Extract the matrix R[i, j, k], which is of shape (3, 3)
+                    matrix = R[i, j, k]
+                    # Compute the trace (sum of diagonal elements)
+                    cos_theta[i, j, k] = np.trace(matrix)  # Sum of diagonal elements
 
         # Compute the angles (distances)
         theta = np.arccos(np.clip(cos_theta, -1, 1))  # Shape: (N, M, orbit_size)
 
         # Find the minimum distance and corresponding matrix for each (i, j) pair
-        min_indices = np.argmin(theta, axis=2)  # Shape: (N, M)
-        distances = np.min(theta, axis=2)  # Shape: (N, M)
+        min_indices = np.empty(theta.shape[:-1], dtype=np.int64)
+
+        for i in range(theta.shape[0]):  # Loop over the N dimension
+            for j in range(theta.shape[1]):  # Loop over the M dimension
+                min_indices[i, j] = np.argmin(theta[i, j])  # Find the index of the min along the last axis manually
+
+        distances = np.empty(theta.shape[:-1], dtype=np.float64)
+
+        for i in range(theta.shape[0]):  # Loop over the N dimension
+            for j in range(theta.shape[1]):  # Loop over the M dimension
+                distances[i, j] = min(theta[i, j])  # Find the minimum value along the last axis manually
 
         # Extract the closest matrices from the orbit
         N, M = min_indices.shape
@@ -266,29 +319,30 @@ class SO3DistanceSq(DistanceSq):
 
         # Prepare indices for advanced indexing
         orbit_indices = np.arange(orbit_size)
-        min_indices_expanded = min_indices[:, :, None, None, None]  # Shape: (N, M, 1, 1)
+        min_indices_expanded = min_indices.reshape(min_indices.shape[0], min_indices.shape[1], 1, 1, 1)
 
-        orbits_repeated = np.repeat(orbits[None, :, :, :, :], R1s.shape[0], axis=0)  # Shape: (N, M, orbit_size, 3, 3)
-        del R1s
-        del orbits
-        gc.collect()
+        # Create an empty array with the required shape
+        orbits_repeated = np.empty((R1s.shape[0], *orbits.shape), dtype=orbits.dtype)
 
-        closest_orbits = np.take_along_axis(orbits_repeated, min_indices_expanded, axis=2).squeeze(2)  # Shape: (N, M, 3, 3)
-        del orbits_repeated
-        gc.collect()
+        # Use a loop to fill the new array
+        for i in range(R1s.shape[0]):
+            orbits_repeated[i] = orbits
+
+        # Ensure the result is contiguous in memory
+        orbits_repeated = np.ascontiguousarray(orbits_repeated)
+
+        closest_orbits = np.take_along_axis(orbits_repeated, min_indices_expanded, axis=2)
+        closest_orbits = np.reshape(closest_orbits, (closest_orbits.shape[0], closest_orbits.shape[1], -1, *closest_orbits.shape[3:]))
 
         # Combine with the Euclidean distance components
-        distances = self.symmetry_weight * distances ** 2 + remaining_dists_squared
-
-        del remaining_dists_squared
-        gc.collect()
+        distances = symmetry_weight * distances ** 2 + remaining_dists_squared
 
         # Fix how nearest entries are listed
-        nearest_entries = np.tile(np_q2s, (len(q1s), 1, 1))
+        nearest_entries = np.empty((len(q1s), *q2s.shape), dtype=q2s.dtype)
+        for i in range(len(q1s)):
+            nearest_entries[i] = q2s
 
-        nearest_entries[:, :, self.symmetry_dof_start:symmetry_dof_end] = closest_orbits.reshape(len(q1s), len(q2s), 9)
-        del closest_orbits
-        gc.collect()
+        nearest_entries[:, :, symmetry_dof_start:symmetry_dof_end] = closest_orbits.reshape(len(q1s), len(q2s), 9)
 
         return distances, nearest_entries
 
