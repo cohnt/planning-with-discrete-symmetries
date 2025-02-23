@@ -1,6 +1,8 @@
 import numpy as np
 import src.symmetry
 import gc
+import math
+from numba import njit
 
 from pydrake.all import (
     RotationMatrix,
@@ -11,6 +13,54 @@ from pydrake.all import (
     CompositeTrajectory
 )
 from scipy.stats import special_ortho_group
+
+@njit(fastmath=True, parallel=True)
+def matrix_vector_dot(matrix, vector):
+    result = [0.0] * len(matrix)
+    for i in range(len(matrix)):
+        sum_value = 0.0
+        for j in range(len(vector)):
+            sum_value += matrix[i][j] * vector[j]
+        result[i] = sum_value
+    return result
+
+@njit(fastmath=True, parallel=True)
+def matrix_matrix_dot(A, B):
+    rows_A = len(A)
+    cols_A = len(A[0])
+    cols_B = len(B[0])
+    
+    result = [[0.0] * cols_B for _ in range(rows_A)]
+    
+    for i in range(rows_A):
+        for j in range(cols_B):
+            sum_value = 0.0
+            for k in range(cols_A):
+                sum_value += A[i][k] * B[k][j]
+            result[i][j] = sum_value
+    
+    return result
+
+@njit(fastmath=True, parallel=True)
+def matrix_transpose(A):
+    rows = len(A)
+    cols = len(A[0])
+    result = [[0.0] * rows for _ in range(cols)]
+    for i in range(rows):
+        for j in range(cols):
+            result[j][i] = A[i][j]
+    return result
+
+@njit(fastmath=True, parallel=True)
+def matrix_trace(A):
+    trace_value = 0.0
+    for i in range(len(A)):
+        trace_value += A[i][i]
+    return trace_value
+
+@njit(fastmath=True, parallel=True)
+def arccos_clip(x):
+    return math.acos(max(-1.0, min(1.0, x)))
 
 def rotation_distance_so2(m1, m2):
     R = m1 @ np.moveaxis(m2, -2, -1)
@@ -227,70 +277,57 @@ class SO3DistanceSq(DistanceSq):
         np_q1s = np.asarray(q1s)
         np_q2s = np.asarray(q2s)
 
-        symmetry_dof_end = self.symmetry_dof_start + 9
+        return SO3_pairwise(np_q1s, np_q2s, self.symmetry_dof_start, self.symmetry_weight, self.G.matrices)
 
-        # Euclidean components
-        remaining_q1s = np.delete(np_q1s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
-        remaining_q2s = np.delete(np_q2s, slice(self.symmetry_dof_start, symmetry_dof_end), axis=1)
-        remaining_dists_squared = (
-            np.sum(remaining_q1s**2, axis=1, keepdims=True)  # Shape (n, 1)
-            + np.sum(remaining_q2s**2, axis=1)              # Shape (m,)
-            - 2 * np.dot(remaining_q1s, remaining_q2s.T)    # Shape (n, m)
-        )
-        del remaining_q1s
-        del remaining_q2s
-        gc.collect()
+@njit(fastmath=True, parallel=True)
+def SO3_pairwise(q1s, q2s, symmetry_dof_start, symmetry_weight, G_matrices):
+    if q2s is None:
+        q2s = q1s
+    
+    N = len(q1s)
+    M = len(q2s)
+    orbit_size = len(G_matrices)
+    symmetry_dof_end = symmetry_dof_start + 9
+    
+    distances = [[0.0] * M for _ in range(N)]
+    nearest_entries = [[[0.0] * len(q2s[0]) for _ in range(M)] for _ in range(N)]
+    
+    for i in range(N):
+        for j in range(M):
+            remaining_dist_sq = 0.0
+            for k in range(len(q1s[i])):
+                if symmetry_dof_start <= k < symmetry_dof_end:
+                    continue
+                diff = q1s[i][k] - q2s[j][k]
+                remaining_dist_sq += diff * diff
+            
+            R1 = [q1s[i][symmetry_dof_start + r * 3: symmetry_dof_start + (r + 1) * 3] for r in range(3)]
+            R2 = [q2s[j][symmetry_dof_start + r * 3: symmetry_dof_start + (r + 1) * 3] for r in range(3)]
+            R2_transposed = matrix_transpose(R2)
+            
+            min_theta = float('inf')
+            closest_orbit = None
+            
+            for g in range(orbit_size):
+                orbit_matrix = G_matrices[g]
+                transformed_R2 = matrix_matrix_dot(orbit_matrix, R2_transposed)
+                R = matrix_matrix_dot(R1, transformed_R2)
+                cos_theta = (matrix_trace(R) - 1) / 2
+                theta = arccos_clip(cos_theta)
+                
+                if theta < min_theta:
+                    min_theta = theta
+                    closest_orbit = transformed_R2
+            
+            distances[i][j] = symmetry_weight * min_theta ** 2 + remaining_dist_sq
+            nearest_entries[i][j] = list(q2s[j])
+            
+            for r in range(3):
+                for c in range(3):
+                    nearest_entries[i][j][symmetry_dof_start + r * 3 + c] = closest_orbit[r][c]
+    
+    return distances, nearest_entries
 
-        R1s = np_q1s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
-        R2s = np_q2s[:,self.symmetry_dof_start:symmetry_dof_end].reshape(-1, 3, 3)
-        orbits = R2s[:, None] @ self.G.matrices # Shape (m, orbit_len, 3, 3)
-        del R2s
-        gc.collect()
-
-        # Compute pairwise R = m1 @ m2^T for all combinations of matrices1 and orbits
-        R = R1s[:, None, None] @ np.transpose(orbits, (0, 1, 3, 2))  # Shape: (N, M, orbit_size, 3, 3)
-
-        # Compute the cosine of the angle for each pair
-        cos_theta = (np.trace(R, axis1=-2, axis2=-1) - 1) / 2  # Shape: (N, M, orbit_size)
-
-        # Compute the angles (distances)
-        theta = np.arccos(np.clip(cos_theta, -1, 1))  # Shape: (N, M, orbit_size)
-
-        # Find the minimum distance and corresponding matrix for each (i, j) pair
-        min_indices = np.argmin(theta, axis=2)  # Shape: (N, M)
-        distances = np.min(theta, axis=2)  # Shape: (N, M)
-
-        # Extract the closest matrices from the orbit
-        N, M = min_indices.shape
-        orbit_size = orbits.shape[1]
-
-        # Prepare indices for advanced indexing
-        orbit_indices = np.arange(orbit_size)
-        min_indices_expanded = min_indices[:, :, None, None, None]  # Shape: (N, M, 1, 1)
-
-        orbits_repeated = np.repeat(orbits[None, :, :, :, :], R1s.shape[0], axis=0)  # Shape: (N, M, orbit_size, 3, 3)
-        del R1s
-        del orbits
-        gc.collect()
-
-        closest_orbits = np.take_along_axis(orbits_repeated, min_indices_expanded, axis=2).squeeze(2)  # Shape: (N, M, 3, 3)
-        del orbits_repeated
-        gc.collect()
-
-        # Combine with the Euclidean distance components
-        distances = self.symmetry_weight * distances ** 2 + remaining_dists_squared
-
-        del remaining_dists_squared
-        gc.collect()
-
-        # Fix how nearest entries are listed
-        nearest_entries = np.tile(np_q2s, (len(q1s), 1, 1))
-
-        nearest_entries[:, :, self.symmetry_dof_start:symmetry_dof_end] = closest_orbits.reshape(len(q1s), len(q2s), 9)
-        del closest_orbits
-        gc.collect()
-
-        return distances, nearest_entries
 
 class Interpolate():
     def __init__(self, G, ambient_dim, symmetry_dof_start):
