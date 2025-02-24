@@ -10,7 +10,7 @@ import src.planners.imacs as imacs
 
 class PRMOptions:
     def __init__(self, neighbor_radius=1e-1, neighbor_k=12, neighbor_mode="k",
-                 check_size=1e-2, max_vertices=1e3, scale=True, max_ram_pairwise_gb=10):
+                 check_size=1e-2, max_vertices=1e3, scale=True, max_ram_pairwise_gb=10, min_k=1):
         self.neighbor_radius = neighbor_radius
         self.neighbor_k = neighbor_k
         self.neighbor_mode = neighbor_mode # "radius", "k"
@@ -18,6 +18,7 @@ class PRMOptions:
         self.max_vertices = int(max_vertices)
         self.scale = scale
         self.max_ram_pairwise_gb = max_ram_pairwise_gb
+        self.min_k = min_k
 
 class PRM:
     def __init__(self, Sampler, Metric, Interpolator, CollisionChecker, options):
@@ -136,6 +137,8 @@ class PRM:
                 if self.options.scale:
                     k *= np.log(card)
                 k = int(np.ceil(k))
+                if k < self.options.min_k:
+                    k = self.options.min_k
                 j_list = np.argpartition(dist_mat[i], k)[:k]
                 for j in j_list:
                     if i > j:

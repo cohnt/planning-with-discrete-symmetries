@@ -36,6 +36,10 @@ parser.add_argument("--n_worlds", type=int, default=10)
 parser.add_argument("--n_pairs_per_world", type=int, default=100)
 parser.add_argument("--prm_nodes_min", type=int, default=1000)
 parser.add_argument("--skip_uneven", action="store_true")
+parser.add_argument("--star", action="store_true")
+parser.add_argument("--k", type=int, default=100)
+parser.add_argument("--radius", type=float, default=5.0)
+parser.add_argument("--min_k", type=int, default=1)
 
 args = parser.parse_args()
 if args.shape == "polygon":
@@ -83,7 +87,7 @@ n_pairs_per_world = args.n_pairs_per_world
 
 # All parameters besides max_vertices are set later in the script.
 n_vertices = args.prm_nodes_min if args.skip_uneven else args.prm_nodes_min * G.order()
-prm_options = prm.PRMOptions(max_vertices=n_vertices, neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
+prm_options = prm.PRMOptions(max_vertices=n_vertices, neighbor_k=args.k, neighbor_radius=args.radius, neighbor_mode=None, scale=args.star, max_ram_pairwise_gb=10, min_k=args.min_k)
 
 planners_verbose = True
 
@@ -136,8 +140,9 @@ prm_star_radius_original = aop.radius_prm(c_space_dimension, c_space_volume)
 prm_star_radius_quotient = aop.radius_prm(c_space_dimension, c_space_volume / G.order())
 prm_star_k = aop.knn_prm(c_space_dimension)
 
-prm_options.neighbor_k = prm_star_k
-prm_options.neighbor_radius = prm_star_radius_original
+if args.star:
+    prm_options.neighbor_k = prm_star_k
+    prm_options.neighbor_radius = prm_star_radius_original
 
 r_prm_options = copy.deepcopy(prm_options)
 r_prm_options.neighbor_mode = "radius"
@@ -151,9 +156,13 @@ r_prm_options_uneven.neighbor_radius = prm_star_radius_quotient
 k_prm_options_uneven = copy.deepcopy(k_prm_options)
 k_prm_options_uneven.max_vertices = int(k_prm_options_uneven.max_vertices / G.order())
 
-print("PRM* Radius Ambient", prm_star_radius_original)
-print("PRM* Radius Quotient", prm_star_radius_quotient)
-print("PRM* k (Both)", prm_star_k)
+if args.star:
+    print("PRM* Radius Ambient", prm_star_radius_original)
+    print("PRM* Radius Quotient", prm_star_radius_quotient)
+    print("PRM* k (Both)", prm_star_k)
+else:
+    print("PRM Radius", prm_options.neighbor_radius)
+    print("PRM k", prm_options.neighbor_k)
 
 print("Running comparison for a %s across %d worlds, with %d plans per world" % (G_name, n_worlds, n_pairs_per_world))
 print("Group order: %d" % G.order())
