@@ -47,7 +47,7 @@ n_pairs_per_world = args.n_pairs_per_world
 # All parameters besides max_vertices are set later in the script.
 prm_options = prm.PRMOptions(max_vertices=args.n_vertices, neighbor_k=100, neighbor_radius=None, neighbor_mode="k", scale=False, max_ram_pairwise_gb=30)
 
-planners_verbose = True
+planners_verbose = False
 
 overall_t0 = time.time()
 

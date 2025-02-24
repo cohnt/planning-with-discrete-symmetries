@@ -35,6 +35,7 @@ parser.add_argument("--n_sides", type=int, required=False)
 parser.add_argument("--n_worlds", type=int, default=10)
 parser.add_argument("--n_pairs_per_world", type=int, default=100)
 parser.add_argument("--prm_nodes_min", type=int, default=1000)
+parser.add_argument("--skip_uneven", action="store_true")
 
 args = parser.parse_args()
 if args.shape == "polygon":
@@ -81,7 +82,8 @@ n_worlds = args.n_worlds
 n_pairs_per_world = args.n_pairs_per_world
 
 # All parameters besides max_vertices are set later in the script.
-prm_options = prm.PRMOptions(max_vertices=args.prm_nodes_min * G.order(), neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
+n_vertices = args.prm_nodes_min if args.skip_uneven else args.prm_nodes_min * G.order()
+prm_options = prm.PRMOptions(max_vertices=n_vertices, neighbor_k=None, neighbor_radius=None, neighbor_mode=None, scale=True, max_ram_pairwise_gb=10)
 
 planners_verbose = True
 
@@ -179,7 +181,10 @@ for random_seed in tqdm(range(n_worlds), disable=planners_verbose):
     prm_r_aware_uneven = prm.PRM(Sampler_aware, Metric_aware, Interpolator_aware, CollisionCheckerWrapper, r_prm_options_uneven)
     prm_k_aware_uneven = prm.PRM(Sampler_aware, Metric_aware, Interpolator_aware, CollisionCheckerWrapper, k_prm_options_uneven)
 
-    planners = [prm_r_unaware_even, prm_r_aware_even, prm_k_unaware_even, prm_k_aware_even, prm_r_aware_uneven, prm_k_aware_uneven]
+    if args.skip_uneven:
+        planners = [prm_r_unaware_even, prm_r_aware_even, prm_k_unaware_even, prm_k_aware_even]
+    else:
+        planners = [prm_r_unaware_even, prm_r_aware_even, prm_k_unaware_even, prm_k_aware_even, prm_r_aware_uneven, prm_k_aware_uneven]
 
     runtimes.append([])
     for planner in planners:
@@ -217,17 +222,21 @@ path_lengths = np.asarray(path_lengths)
 runtimes = np.asarray(runtimes)
 
 print("KNN-PRM symmetry success rate: %f" % (np.isfinite(path_lengths[:,3]).sum() / path_lengths.shape[0]))
-print("KNN-PRM symmetry success rate (reduced resources): %f" % (np.isfinite(path_lengths[:,5]).sum() / path_lengths.shape[0]))
+if not args.skip_uneven:
+    print("KNN-PRM symmetry success rate (reduced resources): %f" % (np.isfinite(path_lengths[:,5]).sum() / path_lengths.shape[0]))
 print("KNN-PRM baseline success rate: %f" % (np.isfinite(path_lengths[:,2]).sum() / path_lengths.shape[0]))
 
 print("Radius-PRM symmetry success rate: %f" % (np.isfinite(path_lengths[:,1]).sum() / path_lengths.shape[0]))
-print("Radius-PRM symmetry success rate (reduced resources): %f" % (np.isfinite(path_lengths[:,4]).sum() / path_lengths.shape[0]))
+if not args.skip_uneven:
+    print("Radius-PRM symmetry success rate (reduced resources): %f" % (np.isfinite(path_lengths[:,4]).sum() / path_lengths.shape[0]))
 print("Radius-PRM baseline success rate: %f" % (np.isfinite(path_lengths[:,0]).sum() / path_lengths.shape[0]))
 
 mask_radius_even = np.logical_and(*np.isfinite(path_lengths[:,[0,1]]).T)
-mask_radius_uneven = np.logical_and(*np.isfinite(path_lengths[:,[0,4]]).T)
+if not args.skip_uneven:
+    mask_radius_uneven = np.logical_and(*np.isfinite(path_lengths[:,[0,4]]).T)
 mask_knn_even = np.logical_and(*np.isfinite(path_lengths[:,[2,3]]).T)
-mask_knn_uneven = np.logical_and(*np.isfinite(path_lengths[:,[2,5]]).T)
+if not args.skip_uneven:
+    mask_knn_uneven = np.logical_and(*np.isfinite(path_lengths[:,[2,5]]).T)
 
 def compare(new_idx, old_idx, mask):
     path_lengths_to_compare = path_lengths[mask]
@@ -250,17 +259,18 @@ print("\nRadius-PRM Comparison (Equal Resources)")
 print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
 print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
 
-# KNN-PRM unveven comparison
-path_improvement, time_improvement = compare(5, 2, mask_knn_uneven)
-print("\nKNN-PRM Comparison (Unequal Resources)")
-print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
-print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
+if not args.skip_uneven:
+    # KNN-PRM unveven comparison
+    path_improvement, time_improvement = compare(5, 2, mask_knn_uneven)
+    print("\nKNN-PRM Comparison (Unequal Resources)")
+    print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
+    print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
 
-# Radius-PRM unveven comparison
-path_improvement, time_improvement = compare(4, 0, mask_radius_uneven)
-print("\nRadius-PRM Comparison (Unequal Resources)")
-print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
-print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
+    # Radius-PRM unveven comparison
+    path_improvement, time_improvement = compare(4, 0, mask_radius_uneven)
+    print("\nRadius-PRM Comparison (Unequal Resources)")
+    print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
+    print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
 
 overall_t1 = time.time()
 print("Total script runtime", (overall_t1 - overall_t0))
