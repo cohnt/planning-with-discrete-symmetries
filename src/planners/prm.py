@@ -5,6 +5,7 @@ from src.util import repo_dir
 import pickle
 import time
 import gc
+from sklearn.neighbors import NearestNeighbors
 
 import src.planners.imacs as imacs
 
@@ -78,34 +79,56 @@ class PRM:
             targets = None
             targets_too_large = True
 
-        n_blocks = (int(len(nodes) / self.pairwise_max_block_size) + 1) ** 2
-        if verbose:
-            if n_blocks == 1:
-                print("Computing pairwise distances in a single block")
-            else:
-                print("Using %dx%d blocks for pairwise distance computations" % (self.pairwise_max_block_size, self.pairwise_max_block_size))
-        progress_bar = tqdm(total=n_blocks, desc="Pairwise Distance Blocks", disable=not verbose)
-        for i in range(0, len(nodes), self.pairwise_max_block_size):
-            i_max = i + self.pairwise_max_block_size
-            for j in range(0, len(nodes), self.pairwise_max_block_size):
-                progress_bar.update(1)
-                # TODO: Maybe make this i to len(nodes)?
-                if i == j:
-                    block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max])
-                    dist_mat[i:i_max, i:i_max] = block_dist
-                    if not targets_too_large:
-                        targets[i:i_max, i:i_max] = block_targets
-                    del block_dist, block_targets
-                    gc.collect()
-                else:
-                    j_max = j + self.pairwise_max_block_size
-                    block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max], nodes[j:j_max])
-                    dist_mat[i:i_max, j:j_max] = block_dist
-                    if not targets_too_large:
-                        targets[i:i_max, j:j_max] = block_targets
-                    del block_dist, block_targets
-                    gc.collect()
-        progress_bar.close()
+        # n_blocks = (int(len(nodes) / self.pairwise_max_block_size) + 1) ** 2
+        # if verbose:
+        #     if n_blocks == 1:
+        #         print("Computing pairwise distances in a single block")
+        #     else:
+        #         print("Using %dx%d blocks for pairwise distance computations" % (self.pairwise_max_block_size, self.pairwise_max_block_size))
+        # progress_bar = tqdm(total=n_blocks, desc="Pairwise Distance Blocks", disable=not verbose)
+        # for i in range(0, len(nodes), self.pairwise_max_block_size):
+        #     i_max = i + self.pairwise_max_block_size
+        #     for j in range(0, len(nodes), self.pairwise_max_block_size):
+        #         progress_bar.update(1)
+        #         # TODO: Maybe make this i to len(nodes)?
+        #         if i == j:
+        #             block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max])
+        #             dist_mat[i:i_max, i:i_max] = block_dist
+        #             if not targets_too_large:
+        #                 targets[i:i_max, i:i_max] = block_targets
+        #             del block_dist, block_targets
+        #             gc.collect()
+        #         else:
+        #             j_max = j + self.pairwise_max_block_size
+        #             block_dist, block_targets = self.Metric.pairwise(nodes[i:i_max], nodes[j:j_max])
+        #             dist_mat[i:i_max, j:j_max] = block_dist
+        #             if not targets_too_large:
+        #                 targets[i:i_max, j:j_max] = block_targets
+        #             del block_dist, block_targets
+        #             gc.collect()
+        # progress_bar.close()
+
+        targets = None
+        targets_too_large = True
+
+        sklearn_metric = lambda x, y : self.Metric(x, y)[0]
+        nn = NearestNeighbors(algorithm="ball_tree", leaf_size=30, metric=sklearn_metric, n_jobs=-1)
+        print("Fitting NearestNeighbors object...")
+        nn.fit(nodes)
+        print("Done! Computing nearest neighbors...")
+
+        t0 = time.time()
+        if self.options.neighbor_mode == "radius":
+            max_radius = self.options.neighbor_radius
+            dist_mat = nn.radius_neighbors_graph(radius=self.options.neighbor_radius, mode="distance").toarray()
+        elif self.options.neighbor_mode == "k":
+            max_k = self.options.neighbor_radius
+            max_k *= np.log(self.options.max_vertices)
+            max_k = int(np.ceil(max_k))
+            dist_mat = nn.kneighbors_graph(n_neighbors=max_k, mode="distance").toarray()
+        dist_mat[dist_mat == 0] = np.inf
+        t1 = time.time()
+        print("Done! dt was ", t1 - t0)
 
         np.fill_diagonal(dist_mat, np.inf)
 
