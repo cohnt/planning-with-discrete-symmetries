@@ -24,11 +24,12 @@ options = prm.PRMOptions(max_vertices=1e4, neighbor_k=12, neighbor_radius=5e0, n
 meshcat = StartMeshcat()
 
 limits = [[0, 20], [0, 20]]
-params = path_planning_2d.SetupParams(3, limits, 50, 0.75, 0)
+params = path_planning_2d.SetupParams(2, limits, 120, 0.75, 0)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params, n_copies=n_copies)
 
 diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
+diagram.ForcedPublish(diagram_context)
 
 limits_lower = [limits[0][0], limits[1][0], 0] * n_copies
 limits_upper = [limits[0][1], limits[1][1], 0] * n_copies
@@ -48,7 +49,7 @@ print("KNN-PRM* Minimum k:", asymptotic.knn_prm(3))
 options.neighbor_radius = asymptotic.radius_prm(3, c_free_volume)
 options.neighbor_k = asymptotic.knn_prm(3)
 
-G = symmetry.CyclicGroupSO2(3)
+G = symmetry.CyclicGroupSO2(2)
 Sampler = imacs.SO2SampleUniform(G, cspace_dim, symmetry_indices, limits_lower, limits_upper)
 Metric = imacs.SO2DistanceSqMultiple(G, cspace_dim, symmetry_indices)
 Interpolator = imacs.SO2InterpolateMultiple(G, cspace_dim, symmetry_indices)

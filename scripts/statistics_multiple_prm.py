@@ -30,6 +30,7 @@ parser.add_argument("--dimension", type=int, required=True)
 parser.add_argument("--n_sides", type=int, required=True)
 parser.add_argument("--n_worlds", type=int, default=10)
 parser.add_argument("--n_pairs_per_world", type=int, default=100)
+parser.add_argument("--n_vertices", type=int, default=1000)
 
 args = parser.parse_args()
 
@@ -44,7 +45,7 @@ n_worlds = args.n_worlds
 n_pairs_per_world = args.n_pairs_per_world
 
 # All parameters besides max_vertices are set later in the script.
-prm_options = prm.PRMOptions(max_vertices=5000, neighbor_k=None, neighbor_radius=None, neighbor_mode="k", scale=True, max_ram_pairwise_gb=10)
+prm_options = prm.PRMOptions(max_vertices=args.n_vertices, neighbor_k=100, neighbor_radius=None, neighbor_mode="k", scale=False, max_ram_pairwise_gb=30)
 
 planners_verbose = True
 
@@ -53,7 +54,7 @@ overall_t0 = time.time()
 c_space_dimension = 3
 symmetry_indices = list(range(2, 3*n_copies, 3))
 limits = np.array([[0, 20], [0, 20]])
-params = path_planning_2d.SetupParams(G.order(), limits, 80, 0.75, 0)
+params = path_planning_2d.SetupParams(G.order(), limits, 120, 0.75, 0)
 c_space_volume = np.prod(limits[:,1] - limits[:,0]) * aop.s1_volume()
 
 limits_lower = [limits[0][0], limits[1][0], 0] * n_copies
