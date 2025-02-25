@@ -16,9 +16,9 @@ echo "[dimension_scaling_launch.sh] Date: $DATE"
 echo "[dimension_scaling_launch.sh] Time: $TIME"
 
 SHAPE=polygon
-NSIDES=3
+NSIDES=2
 NWORLDS=10
-NPAIRS=100
+NPAIRS=10
 MAXDIMENSION=12
 NVERTICES=1000
 
@@ -30,5 +30,6 @@ echo "[dimension_scaling_launch.sh] Maximum Dimension: $MAXDIMENSION"
 echo "[dimension_scaling_launch.sh] Number of Vertices: $NVERTICES"
 
 for i in $(seq 3 3 $MAXDIMENSION);
-do python3 scripts/statistics_multiple_prm.py --dimension=$i --n_sides=$NSIDES --n_worlds=$NWORLDS --n_pairs_per_world=$NPAIRS --n_vertices=$NVERTICES
+# do python3 scripts/statistics_multiple_prm.py --dimension=$i --n_sides=$NSIDES --n_worlds=$NWORLDS --n_pairs_per_world=$NPAIRS --n_vertices=$NVERTICES
+do python3 scripts/statistics_multiple_rrt.py --dimension=$i --n_sides=$NSIDES --n_worlds=$NWORLDS --n_pairs_per_world=$NPAIRS --rrt_nodes_max=$NVERTICES --step_size=5.0
 done
