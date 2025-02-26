@@ -132,7 +132,7 @@ class BiRRT:
         self.CollisionChecker = CollisionChecker
         self.options = options
 
-    def plan(self, start, goal, verbose=False):
+    def plan(self, start, goal, verbose=False, return_time_to_goal=False):
         t0 = time.time()
 
         self.tree_a = nx.DiGraph()
@@ -201,9 +201,15 @@ class BiRRT:
                 path.reverse()
                 new_path = [(bar, foo) for foo, bar in path]
                 path = new_path
-            return path
+            out = path
         else:
-            return []
+            out = []
+
+        t1 = time.time()
+
+        if return_time_to_goal:
+            out = (out, t1 - t0)
+        return out
 
     def _nearest_idx(self, tree, q_subgoal):
         all_qs = np.array([tree.nodes[i]["q"] for i in range(len(tree))])
