@@ -21,6 +21,9 @@ shortcut_options = shortcut.ShortcutOptions(max_iters=1e3)
 
 meshcat = StartMeshcat()
 
+# n_sides = 3
+n_sides = 2
+
 use_birrt = True
 n_copies = 4
 q0 = np.array([0.01, 0.01, 0,
@@ -33,7 +36,7 @@ q1 = np.array([19.9, 0.01, np.pi,
                0.01, 0.01, np.pi])[:3*n_copies]
 
 limits = [[0, 20], [0, 20]]
-params = path_planning_2d.SetupParams(3, limits, 50, 0.75, 0)
+params = path_planning_2d.SetupParams(n_sides, limits, 50, 0.75, 6)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params, n_copies=n_copies)
 
 limits_lower = [limits[0][0], limits[1][0], 0] * n_copies
@@ -42,7 +45,7 @@ limits_upper = [limits[0][1], limits[1][1], 0] * n_copies
 cspace_dim = 3 * n_copies
 symmetry_indices = symmetry_indices = list(range(2, 3*n_copies, 3))
 
-G = symmetry.CyclicGroupSO2(3)
+G = symmetry.CyclicGroupSO2(n_sides)
 Sampler = imacs.SO2SampleUniform(G, cspace_dim, symmetry_indices, limits_lower, limits_upper)
 Metric = imacs.SO2DistanceSqMultiple(G, cspace_dim, symmetry_indices)
 Interpolator = imacs.SO2InterpolateMultiple(G, cspace_dim, symmetry_indices)
@@ -54,6 +57,7 @@ shortcutter = shortcut.Shortcut(Metric, Interpolator, CollisionChecker, shortcut
 
 diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
+diagram.ForcedPublish(diagram_context)
 
 assert CollisionChecker.CheckConfigCollisionFree(q0)
 assert CollisionChecker.CheckConfigCollisionFree(q1)

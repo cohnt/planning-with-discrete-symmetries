@@ -31,5 +31,5 @@ echo "[dimension_scaling_launch.sh] Number of Vertices: $NVERTICES"
 
 for i in $(seq 3 3 $MAXDIMENSION);
 # do python3 scripts/statistics_multiple_prm.py --dimension=$i --n_sides=$NSIDES --n_worlds=$NWORLDS --n_pairs_per_world=$NPAIRS --n_vertices=$NVERTICES
-do python3 scripts/statistics_multiple_rrt.py --dimension=$i --n_sides=$NSIDES --n_worlds=$NWORLDS --n_pairs_per_world=$NPAIRS --rrt_nodes_max=$NVERTICES --step_size=5.0
+do python3 scripts/statistics_multiple_rrt.py --dimension=$i --n_sides=$NSIDES --n_worlds=$NWORLDS --n_pairs_per_world=$NPAIRS --rrt_nodes_max=$NVERTICES --step_size=5.0 --birrt
 done

@@ -34,6 +34,7 @@ parser.add_argument("--n_worlds", type=int, default=10)
 parser.add_argument("--n_pairs_per_world", type=int, default=100)
 parser.add_argument("--rrt_nodes_max", type=int, default=1000)
 parser.add_argument("--step_size", type=float, default=1.0)
+parser.add_argument("--birrt", action="store_true")
 
 args = parser.parse_args()
 
@@ -49,7 +50,7 @@ n_pairs_per_world = args.n_pairs_per_world
 
 rrt_options = rrt.RRTOptions(max_vertices=args.rrt_nodes_max, max_iters=1e5, step_size=args.step_size, goal_sample_frequency=0.01, stop_at_goal=True)
 
-planners_verbose = True
+planners_verbose = False
 
 overall_t0 = time.time()
 
@@ -64,7 +65,7 @@ overall_t0 = time.time()
 c_space_dimension = 3
 symmetry_indices = list(range(2, 3*n_copies, 3))
 limits = np.array([[0, 20], [0, 20]])
-params = path_planning_2d.SetupParams(G.order(), limits, 120, 0.75, 0)
+params = path_planning_2d.SetupParams(G.order(), limits, 50, 0.75, 0)
 c_space_volume = np.prod(limits[:,1] - limits[:,0]) * aop.s1_volume()
 
 limits_lower = [limits[0][0], limits[1][0], 0] * n_copies
@@ -97,8 +98,12 @@ for random_seed in range(n_worlds):
     diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params, n_copies=n_copies)
     CollisionCheckerWrapper = CollisionChecker
     
-    planner_unaware = rrt.RRT(Sampler_unaware, Metric_unaware, Interpolator_unaware, CollisionCheckerWrapper, rrt_options)
-    planner_aware = rrt.RRT(Sampler_aware, Metric_aware, Interpolator_aware, CollisionCheckerWrapper, rrt_options)
+    if args.birrt:
+        planner_unaware = rrt.BiRRT(Sampler_unaware, Metric_unaware, Interpolator_unaware, CollisionCheckerWrapper, rrt_options)
+        planner_aware = rrt.BiRRT(Sampler_aware, Metric_aware, Interpolator_aware, CollisionCheckerWrapper, rrt_options)
+    else:
+        planner_unaware = rrt.RRT(Sampler_unaware, Metric_unaware, Interpolator_unaware, CollisionCheckerWrapper, rrt_options)
+        planner_aware = rrt.RRT(Sampler_aware, Metric_aware, Interpolator_aware, CollisionCheckerWrapper, rrt_options)
 
     start_goal_pairs = []
     while len(start_goal_pairs) < n_pairs_per_world:
