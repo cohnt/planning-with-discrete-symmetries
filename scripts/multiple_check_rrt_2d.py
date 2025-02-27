@@ -21,22 +21,22 @@ shortcut_options = shortcut.ShortcutOptions(max_iters=1e3)
 
 meshcat = StartMeshcat()
 
-# n_sides = 3
-n_sides = 2
+n_sides = 3
+# n_sides = 2
 
 use_birrt = True
-n_copies = 4
-q0 = np.array([0.01, 0.01, 0,
-               19.9, 0.01, 0,
-               19.9, 19.9, 0,
-               0.01, 19.9, 0])[:3*n_copies]
-q1 = np.array([19.9, 0.01, np.pi,
-               19.9, 19.9, np.pi,
-               0.01, 19.9, np.pi,
-               0.01, 0.01, np.pi])[:3*n_copies]
+n_copies = 5
+# q0 = np.array([0.01, 0.01, 0,
+#                19.9, 0.01, 0,
+#                19.9, 19.9, 0,
+#                0.01, 19.9, 0])[:3*n_copies]
+# q1 = np.array([19.9, 0.01, np.pi,
+#                19.9, 19.9, np.pi,
+#                0.01, 19.9, np.pi,
+#                0.01, 0.01, np.pi])[:3*n_copies]
 
 limits = [[0, 20], [0, 20]]
-params = path_planning_2d.SetupParams(n_sides, limits, 50, 0.75, 6)
+params = path_planning_2d.SetupParams(n_sides, limits, 50, 0.75, 0)
 diagram, CollisionChecker = path_planning_2d.build_env(meshcat, params, n_copies=n_copies)
 
 limits_lower = [limits[0][0], limits[1][0], 0] * n_copies
@@ -55,8 +55,16 @@ else:
     planner = rrt.RRT(Sampler, Metric, Interpolator, CollisionChecker, options)
 shortcutter = shortcut.Shortcut(Metric, Interpolator, CollisionChecker, shortcut_options)
 
+qs = []
+while len(qs) < 2:
+    q = Sampler(1).flatten()
+    if CollisionChecker.CheckConfigCollisionFree(q):
+        qs.append(q)
+q0, q1 = qs
+
 diagram_context = diagram.CreateDefaultContext()
 plant_context = diagram.plant().GetMyContextFromRoot(diagram_context)
+diagram.plant().SetPositions(plant_context, q0)
 diagram.ForcedPublish(diagram_context)
 
 assert CollisionChecker.CheckConfigCollisionFree(q0)
