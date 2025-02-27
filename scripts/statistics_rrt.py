@@ -175,7 +175,11 @@ for random_seed in range(n_worlds):
             try:
                 path, dt = planner.plan(start, goal, verbose=planners_verbose, return_time_to_goal=True)
                 t1 = time.time()
-            except:
+            except Exception:
+                print("RRT -- FCL error on world %d, plan %d" % (random_seed, count))
+                print("Planner symmetry group order: %d" % planner.Sampler.G.order())
+                import traceback
+                traceback.print_exc()
                 path = []
                 t1 = time.time()
                 dt = t1 - t0
@@ -219,7 +223,11 @@ for random_seed in range(n_worlds):
             try:
                 rrt_star = star.RRTStar(copy.deepcopy(planner), rrt_star_options, verbose=planners_verbose)
                 path = rrt_star.return_plan()
-            except:
+            except Exception:
+                print("RRT* -- FCL error on world %d, plan %d" % (random_seed, count))
+                print("Planner symmetry group order: %d" % planner.Sampler.G.order())
+                import traceback
+                traceback.print_exc()
                 path = []
             t1 = time.time()
             runtimes[-1].append((t1 - t0) + full_runtimes[existing_time_index]) # Cost includes symmetry-unaware RRT time.
