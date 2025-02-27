@@ -134,14 +134,6 @@ elif task_space_dimension == 3:
 else:
     raise NotImplementedError
 
-rrt_star_radius_original = aop.radius_rrt(c_space_dimension, c_space_volume)
-rrt_star_radius_quotient = aop.radius_rrt(c_space_dimension, c_space_volume / G.order())
-rrt_star_options_even = star.RRTStarOptions(connection_radius=rrt_star_radius_original, mode="radius")
-rrt_star_options_uneven = star.RRTStarOptions(connection_radius=rrt_star_radius_quotient, mode="radius")
-
-print("RRT* Radius Ambient", rrt_star_radius_original)
-print("RRT* Radius Quotient", rrt_star_radius_quotient)
-
 print("Running comparison for a %s across %d worlds, with %d plans per world" % (G_name, n_worlds, n_pairs_per_world))
 print("Group order: %d" % G.order())
 # The following lists will be populated by sublists [rrt_unaware, rrt_aware, rrt*_unaware, rrt*_aware_even, rrt*_aware_uneven]
@@ -194,6 +186,19 @@ for random_seed in range(n_worlds):
                 path_lengths[-1].append(np.inf)
             else:
                 path_lengths[-1].append(planner.Metric.path_length(path))
+
+        # Compute RRT* parameters
+        c_star_unaware = path_lengths[-1][-2]
+        c_star_aware = path_lengths[-1][-1]
+        rrt_star_radius_original = aop.radius_rrt(c_space_dimension, c_space_volume, c_star=c_star_unaware, epsilon=0.1, theta=0.24, mu=0.01)
+        rrt_star_radius_quotient = aop.radius_rrt(c_space_dimension, c_space_volume / G.order(), c_star=c_star_aware, epsilon=0.1, theta=0.24, mu=0.01)
+
+        rrt_star_options_even = star.RRTStarOptions(connection_radius=rrt_star_radius_original, mode="radius")
+        rrt_star_options_uneven = star.RRTStarOptions(connection_radius=rrt_star_radius_quotient, mode="radius")
+
+        if planners_verbose:
+            print("RRT* Unaware Radius:", rrt_star_radius_original)
+            print("RRT* Aware Radius:", rrt_star_radius_quotient)
 
         # RRT* symmetry-unware, -aware (equal resources), and -aware (unequal resources) plans
         symmetry_options = [rrt_star_options_even, rrt_star_options_even, rrt_star_options_uneven]
