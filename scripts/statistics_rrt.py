@@ -87,7 +87,7 @@ if task_space_dimension == 2:
 elif task_space_dimension == 3:
     rrt_options = rrt.RRTOptions(max_vertices=args.rrt_nodes_max, max_iters=1e4, step_size=5.0, goal_sample_frequency=0.05, stop_at_goal=False)
 
-planners_verbose = True
+planners_verbose = False
 
 overall_t0 = time.time()
 
@@ -190,8 +190,8 @@ for random_seed in range(n_worlds):
         # Compute RRT* parameters
         c_star_unaware = path_lengths[-1][-2]
         c_star_aware = path_lengths[-1][-1]
-        rrt_star_radius_original = aop.radius_rrt(c_space_dimension, c_space_volume, c_star=c_star_unaware, epsilon=0.1, theta=0.24, mu=0.01)
-        rrt_star_radius_quotient = aop.radius_rrt(c_space_dimension, c_space_volume / G.order(), c_star=c_star_aware, epsilon=0.1, theta=0.24, mu=0.01)
+        rrt_star_radius_original = aop.radius_rrt(c_space_dimension, c_space_volume, c_star=c_star_unaware, epsilon=0.01, theta=0.24, mu=0.01)
+        rrt_star_radius_quotient = aop.radius_rrt(c_space_dimension, c_space_volume / G.order(), c_star=c_star_aware, epsilon=0.01, theta=0.24, mu=0.01)
 
         rrt_star_options_even = star.RRTStarOptions(connection_radius=rrt_star_radius_original, mode="radius")
         rrt_star_options_uneven = star.RRTStarOptions(connection_radius=rrt_star_radius_quotient, mode="radius")
