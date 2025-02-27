@@ -58,7 +58,7 @@ class RRTStar:
             elif self.options.mode == "radius":
                 r = self.options.connection_radius
                 if self.options.scale:
-                    r *= (np.log(card) / card) ** (1/dimension)
+                    r *= (np.log(card) / card) ** (1 / (dimension + 1))
                     r = min(r, self.rrt.options.step_size)
                 if j == 1:
                     start_coeff = r

@@ -32,9 +32,15 @@ def so3_volume():
 # there are zero obstacles), we don't have to add epsilon to handle the
 # strictness of the bound.
 
-def radius_rrt(dimension, c_volume):
+def radius_rrt_old(dimension, c_volume):
     rad_opt = (2 * (1 + (1 / dimension))) ** (1 / dimension)
     rad_opt *= (c_volume / unit_ball_volume(dimension)) ** (1 / dimension)
+    return rad_opt
+
+def radius_rrt(dimension, c_volume, c_star=10, epsilon=0.1, theta=0.24, mu=0.01):
+    numerator = (1 + epsilon / 4) * c_star * c_volume
+    denominator = (1 + dimension) * theta * (1 - mu) * unit_ball_volume(dimension)
+    rad_opt = (2 + theta) * (numerator / denominator) ** (1 / (1 + dimension))
     return rad_opt
 
 def radius_prm(dimension, c_volume):
