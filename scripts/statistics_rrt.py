@@ -172,8 +172,13 @@ for random_seed in range(n_worlds):
         for planner in [planner_unaware, planner_aware]:
             np.random.seed(random_seed)
             t0 = time.time()
-            path, dt = planner.plan(start, goal, verbose=planners_verbose, return_time_to_goal=True)
-            t1 = time.time()
+            try:
+                path, dt = planner.plan(start, goal, verbose=planners_verbose, return_time_to_goal=True)
+                t1 = time.time()
+            except:
+                path = []
+                t1 = time.time()
+                dt = t1 - t0
             full_runtimes.append(t1 - t0)
             runtimes[-1].append(dt)
 
@@ -211,8 +216,11 @@ for random_seed in range(n_worlds):
                 continue
 
             t0 = time.time()
-            rrt_star = star.RRTStar(copy.deepcopy(planner), rrt_star_options, verbose=planners_verbose)
-            path = rrt_star.return_plan()
+            try:
+                rrt_star = star.RRTStar(copy.deepcopy(planner), rrt_star_options, verbose=planners_verbose)
+                path = rrt_star.return_plan()
+            except:
+                path = []
             t1 = time.time()
             runtimes[-1].append((t1 - t0) + full_runtimes[existing_time_index]) # Cost includes symmetry-unaware RRT time.
             if task_space_dimension == 2:
