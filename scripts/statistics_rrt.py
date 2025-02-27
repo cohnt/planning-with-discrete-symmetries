@@ -87,7 +87,7 @@ if task_space_dimension == 2:
 elif task_space_dimension == 3:
     rrt_options = rrt.RRTOptions(max_vertices=args.rrt_nodes_max, max_iters=1e4, step_size=5.0, goal_sample_frequency=0.05, stop_at_goal=False)
 
-planners_verbose = False
+planners_verbose = True
 
 overall_t0 = time.time()
 
@@ -206,7 +206,7 @@ for random_seed in range(n_worlds):
         existing_time_indices = [0, 1, 1]
         for rrt_star_options, planner, existing_time_index in zip(symmetry_options, planners, existing_time_indices):
             if path_lengths[-1][existing_time_index] == np.inf:
-                runtimes[-1].append(full_runtimes[existing_time_index])
+                runtimes[-1].append(np.inf)
                 path_lengths[-1].append(np.inf)
                 continue
 
@@ -231,9 +231,11 @@ runtimes = np.asarray(runtimes)
 print("Symmetry success rate: %f" % (np.isfinite(path_lengths[:,0]).sum() / path_lengths.shape[0]))
 print("Baseline success rate: %f" % (np.isfinite(path_lengths[:,1]).sum() / path_lengths.shape[0]))
 
-mask = np.logical_and(*np.isfinite(path_lengths[:,:2]).T)
+mask_rrt = np.logical_and(*np.isfinite(path_lengths[:,:2]).T)
+mask_star_skipped = np.logical_and(*np.isfinite(runtimes[:,:2]).T)
+mask_rrt_star = np.logical_and(mask_rrt, mask_star_skipped)
 
-def compare(new_idx, old_idx):
+def compare(new_idx, old_idx, mask):
     path_lengths_to_compare = path_lengths[mask]
     path_improvement = np.divide(path_lengths_to_compare[:,old_idx], path_lengths_to_compare[:,new_idx]) # Old / New
 
@@ -243,19 +245,19 @@ def compare(new_idx, old_idx):
     return path_improvement, time_improvement
 
 # RRT comparison
-path_improvement, time_improvement = compare(1, 0)
+path_improvement, time_improvement = compare(1, 0, mask_rrt)
 print("\nRRT Comparison")
 print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
 print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
 
 # RRT* even comparison
-path_improvement, time_improvement = compare(3, 2)
+path_improvement, time_improvement = compare(3, 2, mask_rrt_star)
 print("\nRRT* Comparison (Equal resources)")
 print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
 print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
 
 # RRT* uneven comparison
-path_improvement, time_improvement = compare(4, 2)
+path_improvement, time_improvement = compare(4, 2, mask_rrt_star)
 print("\nRRT* Comparison (Unequal resources)")
 print("Relative path length decrease factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (path_improvement.mean(), path_improvement.std(), (path_improvement > 1).sum() / len(path_improvement)))
 print("Relative runtime speedup factor vs baseline: mean %f ; std %f ; percentage that improved %f" % (time_improvement.mean(), time_improvement.std(), (time_improvement > 1).sum() / len(time_improvement)))
