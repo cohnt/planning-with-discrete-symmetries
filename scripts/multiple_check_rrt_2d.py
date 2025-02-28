@@ -25,7 +25,7 @@ meshcat = StartMeshcat()
 n_sides = 2
 
 use_birrt = True
-n_copies = 3
+n_copies = 4
 # q0 = np.array([0.01, 0.01, 0,
 #                19.9, 0.01, 0,
 #                19.9, 19.9, 0,
@@ -60,7 +60,7 @@ np.random.seed(1)
 while len(qs) < 2:
     q = Sampler(1).flatten()
     if len(qs) < 1:
-        q[0:6] = [ 8.75174423, 17.83546002,  2.91327904,  7.66883038, 15.83450076,  0.18155214]
+        q[0:9] = [ 2.80773877,  3.96202978,  1.88963386, 19.36523151,  6.26848356,  1.20839863, 17.52778305, 17.89213327, -2.60724411]
     if CollisionChecker.CheckConfigCollisionFree(q):
         qs.append(q)
 q0, q1 = qs
