@@ -25,7 +25,7 @@ meshcat = StartMeshcat()
 n_sides = 2
 
 use_birrt = True
-n_copies = 5
+n_copies = 6
 # q0 = np.array([0.01, 0.01, 0,
 #                19.9, 0.01, 0,
 #                19.9, 19.9, 0,
@@ -56,11 +56,11 @@ else:
 shortcutter = shortcut.Shortcut(Metric, Interpolator, CollisionChecker, shortcut_options)
 
 qs = []
-np.random.seed(6)
+np.random.seed(0)
 while len(qs) < 2:
     q = Sampler(1).flatten()
     if len(qs) < 1:
-        q[0:12] = [ 4.08904499, 17.56234873, -2.96951133, 13.4093502,   8.34609605,  0.36875907, 2.80773877,  3.96202978,  1.88963386, 19.36523151,  6.26848356,  1.20839863]
+        q[0:15] = [19.80448543, 16.39716394, -0.54537461, 17.5253531,  16.47518865, -2.79931923, 14.37274473, 16.04341125,  1.48538675, 14.18263502, 10.81873709, -2.35729924, 19.15294591,  8.06512597, -1.77844831]
     if CollisionChecker.CheckConfigCollisionFree(q):
         qs.append(q)
 q0, q1 = qs
