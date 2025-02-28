@@ -248,8 +248,10 @@ print("Symmetry success rate: %f" % (np.isfinite(path_lengths[:,0]).sum() / path
 print("Baseline success rate: %f" % (np.isfinite(path_lengths[:,1]).sum() / path_lengths.shape[0]))
 
 mask_rrt = np.logical_and(*np.isfinite(path_lengths[:,:2]).T)
+mask_rrt_star = np.logical_and(*np.isfinite(path_lengths[:,2:]).T)
 mask_star_skipped = np.logical_and(*np.isfinite(runtimes[:,:2]).T)
-mask_rrt_star = np.logical_and(mask_rrt, mask_star_skipped)
+mask_rrt_star = np.logical_and(mask_rrt_star, mask_star_skipped)
+mask_rrt_star = np.logical_and(mask_rrt_star, mask_rrt)
 
 def compare(new_idx, old_idx, mask):
     path_lengths_to_compare = path_lengths[mask]
