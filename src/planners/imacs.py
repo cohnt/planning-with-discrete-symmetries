@@ -12,11 +12,23 @@ from pydrake.all import (
 )
 from scipy.stats import special_ortho_group
 
+
 def rotation_distance_so2(m1, m2):
-    R = m1 @ np.moveaxis(m2, -2, -1)
-    cos_theta = np.trace(R, 0, -2, -1) / 2
-    theta = np.arccos(np.clip(cos_theta, -1, 1))
-    return theta
+    m1 = np.asarray(m1)
+    m2 = np.asarray(m2)
+
+    # If m2 is 2x2, just handle the single case
+    if m2.ndim == 2:
+        R = m1 @ m2.T
+        cos_theta = np.trace(R) / 2
+        theta = np.arccos(np.clip(cos_theta, -1, 1))
+        return theta
+    else:
+        # m2 has batch dimensions
+        R = m1 @ np.moveaxis(m2, -2, -1)
+        cos_theta = np.trace(R, axis1=-2, axis2=-1) / 2
+        theta = np.arccos(np.clip(cos_theta, -1, 1))
+        return theta
 
 def rotation_distance_so3(m1, m2):
     R = m1 @ np.moveaxis(m2, -2, -1)
