@@ -266,6 +266,7 @@ def build_env(meshcat, params : SetupParams, n_copies=1):
     meshcat.SetProperty("/Lights/PointLightNegativeX", "visible", False)
     meshcat.SetProperty("/Lights/PointLightPositiveX", "visible", False)
     meshcat.SetProperty("/Lights/FillLight", "visible", False)
+    meshcat.SetProperty("/Lights/AmbientLight/<object>", "intensity", 1.0)
 
     draw_boundaries(meshcat, params.limits)
 
