@@ -1,25 +1,32 @@
 import numpy as np
 import networkx as nx
 
-from pydrake.all import Rgba
+from pydrake.all import Rgba, Ellipsoid
 
-def draw_graph(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba(0, 0, 0, 1)):
+def draw_graph(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba(0, 0, 0, 1), draw_caps=True):
     assert len(indices) in [2, 3]
 
     if len(indices) == 2:
-        draw_graph_2d(meshcat, graph, indices, path, linewidth, color)
+        draw_graph_2d(meshcat, graph, indices, path, linewidth, color, draw_caps)
     else:
-        draw_graph_3d(meshcat, graph, indices, path, linewidth, color)
+        draw_graph_3d(meshcat, graph, indices, path, linewidth, color, draw_caps)
 
-def draw_graph_2d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba(0, 0, 0, 1)):
+def draw_graph_2d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba(0, 0, 0, 1), draw_caps=True):
     nodes = [graph.nodes[i]["q"][indices] for i in range(len(graph.nodes))]
     N = len(nodes)
 
     vertices = []
     faces = []
+    edge_points = set()
+
+    # Folder to hold everything
+    meshcat.SetTransform(path, np.eye(4))  # just ensures the path exists
 
     for u, v in graph.edges:
         p, q = nodes[u], nodes[v]
+        edge_points.add(tuple(p))
+        edge_points.add(tuple(q))
+
         edge = q - p
         orth = np.array([edge[1], -edge[0]])
         orth /= np.linalg.norm(orth)
@@ -46,10 +53,24 @@ def draw_graph_2d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba
     faces = np.array(faces)
 
     meshcat.SetTriangleMesh(
-        path=path,
+        path=path + "/edges",
         vertices=vertices.T,
         faces=faces.T,
         rgba=color)
+
+    if draw_caps:
+        sphere_radius = linewidth / 2
+        for i, point in enumerate(edge_points):
+            x, y = point
+            ellipsoid = Ellipsoid(sphere_radius, sphere_radius, sphere_radius)
+            meshcat.SetObject(f"{path}/caps_{i}", ellipsoid, color)
+            # Move it to the vertex
+            meshcat.SetTransform(f"{path}/caps_{i}", np.array([
+                [1, 0, 0, x],
+                [0, 1, 0, y],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1]
+            ]))
 
 def draw_graph_3d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba(0, 0, 0, 1)):
     nodes = [graph.nodes[i]["q"][indices] for i in range(len(graph.nodes))]
