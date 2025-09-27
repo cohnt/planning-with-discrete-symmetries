@@ -18,35 +18,31 @@ def draw_graph_2d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba
     vertices = []
     faces = []
 
-    for i in range(0, N-1):
-        edge = nodes[i+1] - nodes[i]
+    for u, v in graph.edges:
+        p, q = nodes[u], nodes[v]
+        edge = q - p
         orth = np.array([edge[1], -edge[0]])
         orth /= np.linalg.norm(orth)
-        orth *= linewidth
-        orth /= 2
-        vertices.append(nodes[i])
-        vertices.append(nodes[i] + orth)
-        vertices.append(nodes[i] - orth)
-        vertices.append(nodes[i+1])
-        vertices.append(nodes[i+1] + orth)
-        vertices.append(nodes[i+1] - orth)
+        orth *= linewidth / 2
 
-    foo = np.zeros((len(vertices), 3))
-    foo[:,:2] = np.array(vertices)
-    vertices = foo
+        base_idx = len(vertices)
+        vertices.extend([
+            [p[0], p[1], 0],
+            [p[0]+orth[0], p[1]+orth[1], 0],
+            [p[0]-orth[0], p[1]-orth[1], 0],
+            [q[0], q[1], 0],
+            [q[0]+orth[0], q[1]+orth[1], 0],
+            [q[0]-orth[0], q[1]-orth[1], 0],
+        ])
 
-    faces = []
-    for i in range(N-1):
-        idx = 6 * i
-        faces.append([idx, idx+1, idx+3])
-        faces.append([idx, idx+2, idx+3])
-        faces.append([idx+1, idx+3, idx+4])
-        faces.append([idx+2, idx+3, idx+5])
+        faces.extend([
+            [base_idx, base_idx+1, base_idx+3],
+            [base_idx, base_idx+2, base_idx+3],
+            [base_idx+1, base_idx+3, base_idx+4],
+            [base_idx+2, base_idx+3, base_idx+5],
+        ])
 
-        if i > 0:
-            faces.append([idx-2, idx-1, idx+1])
-            faces.append([idx-1, idx+1, idx+2])
-
+    vertices = np.array(vertices)
     faces = np.array(faces)
 
     meshcat.SetTriangleMesh(

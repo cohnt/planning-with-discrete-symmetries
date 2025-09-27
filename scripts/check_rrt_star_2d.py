@@ -22,6 +22,7 @@ from pydrake.all import (
 options = rrt.RRTOptions(max_vertices=1e3, max_iters=1e4, goal_sample_frequency=0.05, stop_at_goal=False, step_size=5.0)
 shortcut_options = shortcut.ShortcutOptions(max_iters=1e2)
 random_seed = 0
+linewidth = 0.05
 
 meshcat = StartMeshcat()
 
@@ -64,7 +65,7 @@ times = [t_scaling * np.sqrt(Metric(path[i-1], path[i])[0]) for i in range(1, le
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path[i-1], path[i]]).T) for i in range(1, len(path))]
 traj1 = CompositeTrajectory.AlignAndConcatenate(segments)
 
-# visualization.draw_graph(meshcat, planner.tree, [0,1], path="symmetry-rrt", color=Rgba(0, 0, 0, 1), linewidth=4.0)
+visualization.draw_graph(meshcat, planner.tree, [0,1], path="symmetry-rrt", color=Rgba(0, 0, 0, 1), linewidth=linewidth)
 
 # Now compare to the plan without symmetries
 
@@ -95,7 +96,7 @@ times = [t_scaling * np.sqrt(Metric2(path2[i-1], path2[i])[0]) for i in range(1,
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([path2[i-1], path2[i]]).T) for i in range(1, len(path2))]
 traj2 = CompositeTrajectory.AlignAndConcatenate(segments)
 
-# visualization.draw_graph(meshcat, planner2.tree, [0,1], path="baseline-rrt", color=Rgba(0.5, 0, 0, 1), linewidth=4.0)
+visualization.draw_graph(meshcat, planner2.tree, [0,1], path="baseline-rrt", color=Rgba(0.5, 0, 0, 1), linewidth=linewidth)
 
 # Check RRT*
 import src.planners.star as star
@@ -123,7 +124,7 @@ times = [t_scaling * np.sqrt(Metric(new_path[i-1], new_path[i])[0]) for i in ran
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([new_path[i-1], new_path[i]]).T) for i in range(1, len(new_path))]
 new_traj = CompositeTrajectory.AlignAndConcatenate(segments)
 
-visualization.draw_graph(meshcat, planner.tree, [0,1], path="symmetry-rrt-star", color=Rgba(0, 0.5, 0, 1))
+visualization.draw_graph(meshcat, planner.tree, [0,1], path="symmetry-rrt-star", color=Rgba(0, 0.5, 0, 1), linewidth=linewidth)
 
 rrt_star2 = star.RRTStar(planner2, rrt_star_options)
 new_path2 = rrt_star2.return_plan()
@@ -139,7 +140,7 @@ times = [t_scaling * np.sqrt(Metric2(new_path2[i-1], new_path2[i])[0]) for i in 
 segments = [PiecewisePolynomial.FirstOrderHold([0, times[i-1]], np.array([new_path2[i-1], new_path2[i]]).T) for i in range(1, len(new_path2))]
 new_traj2 = CompositeTrajectory.AlignAndConcatenate(segments)
 
-visualization.draw_graph(meshcat, planner2.tree, [0,1], path="baseline-rrt-star", color=Rgba(0, 0, 1, 1))
+visualization.draw_graph(meshcat, planner2.tree, [0,1], path="baseline-rrt-star", color=Rgba(0, 0, 1, 1), linewidth=linewidth)
 
 while True:
     for traj, name in zip([new_traj, new_traj2], ["Symmetry-Aware RRT*", "Symmetry-Unaware RRT*"]):
