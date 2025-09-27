@@ -72,94 +72,81 @@ def draw_graph_2d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba
                 [0, 0, 0, 1]
             ]))
 
-def draw_graph_3d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba(0, 0, 0, 1)):
+def draw_graph_3d(meshcat, graph, indices, path="rrt", linewidth=0.1, color=Rgba(0, 0, 0, 1), draw_caps=True):
     nodes = [graph.nodes[i]["q"][indices] for i in range(len(graph.nodes))]
-    N = len(nodes)
 
     vertices = []
     faces = []
 
-    orth1 = orth2 = None
-    for i in range(0, N-1):
-        edge = nodes[i+1] - nodes[i]
+    # Folder for the whole graph
+    meshcat.SetTransform(path, np.eye(4))
+
+    # Keep track of vertices incident to edges
+    edge_points = set()
+
+    # Iterate over all edges in the graph
+    for u, v in graph.edges:
+        p, q = nodes[u], nodes[v]
+        edge_points.add(tuple(p))
+        edge_points.add(tuple(q))
+
+        edge = q - p
         edge_unit = edge / np.linalg.norm(edge)
 
-        if orth1 is None:
-            orth1 = np.random.randn(3)
+        # Generate two orthogonal vectors perpendicular to edge
+        orth1 = np.random.randn(3)
         orth1 -= orth1.dot(edge_unit) * edge_unit
         orth1 /= np.linalg.norm(orth1)
-        orth1 *= linewidth
-        orth1 /= 2
+        orth1 *= linewidth / 2
 
-        orth2 = np.cross(edge, orth1)
+        orth2 = np.cross(edge_unit, orth1)
         orth2 /= np.linalg.norm(orth2)
-        orth2 *= linewidth
-        orth2 /= 2
+        orth2 *= linewidth / 2
 
-        vertices.append(nodes[i] + orth1)
-        vertices.append(nodes[i] - orth1)
-        vertices.append(nodes[i] + orth2)
-        vertices.append(nodes[i] - orth2)
+        base_idx = len(vertices)
+        vertices.extend([
+            p + orth1, p - orth1, p + orth2, p - orth2,
+            q + orth1, q - orth1, q + orth2, q - orth2
+        ])
 
-        vertices.append(nodes[i+1] + orth1)
-        vertices.append(nodes[i+1] - orth1)
-        vertices.append(nodes[i+1] + orth2)
-        vertices.append(nodes[i+1] - orth2)
-
-    vertices = np.array(vertices)
-
-    faces = []
-    for i in range(N-1):
-        idx = 8 * i
-
-        # +1, +2
-        faces.append([idx, idx+2, idx+4])
-        faces.append([idx+2, idx+4, idx+6])
-
-        # +1, -2
-        faces.append([idx, idx+3, idx+4])
-        faces.append([idx+3, idx+4, idx+7])
-
-        # -1, +2
-        faces.append([idx+1, idx+2, idx+5])
-        faces.append([idx+2, idx+5, idx+6])
-
-        # -1, -2
-        faces.append([idx+1, idx+3, idx+5])
-        faces.append([idx+3, idx+5, idx+7])
-
-        if idx > 0:
-            idx -= 4
-
+        faces.extend([
             # +1, +2
-            faces.append([idx, idx+2, idx+4])
-            faces.append([idx+2, idx+4, idx+6])
-
+            [base_idx, base_idx+2, base_idx+4],
+            [base_idx+2, base_idx+4, base_idx+6],
             # +1, -2
-            faces.append([idx, idx+3, idx+4])
-            faces.append([idx+3, idx+4, idx+7])
-
+            [base_idx, base_idx+3, base_idx+4],
+            [base_idx+3, base_idx+4, base_idx+7],
             # -1, +2
-            faces.append([idx+1, idx+2, idx+5])
-            faces.append([idx+2, idx+5, idx+6])
-
+            [base_idx+1, base_idx+2, base_idx+5],
+            [base_idx+2, base_idx+5, base_idx+6],
             # -1, -2
-            faces.append([idx+1, idx+3, idx+5])
-            faces.append([idx+3, idx+5, idx+7])
+            [base_idx+1, base_idx+3, base_idx+5],
+            [base_idx+3, base_idx+5, base_idx+7],
+        ])
 
-    faces.append([0, 1, 2])
-    faces.append([0, 1, 3])
-
-    faces.append(np.array([-1, -2, -3]) + len(vertices))
-    faces.append(np.array([-1, -2, -4]) + len(vertices))
-
+    # Draw triangle mesh for edges
+    vertices = np.array(vertices)
     faces = np.array(faces)
-
     meshcat.SetTriangleMesh(
-        path=path,
-        vertices=vertices.T,
-        faces=faces.T,
-        rgba=color)
+        path + "/edges",
+        vertices.T,
+        faces.T,
+        rgba=color
+    )
+
+    # Draw spherical caps at vertices
+    if draw_caps:
+        sphere_radius = linewidth / 2
+        for i, point in enumerate(edge_points):
+            x, y, z = point
+            ellipsoid = Ellipsoid(sphere_radius, sphere_radius, sphere_radius)
+            meshcat.SetObject(f"{path}/caps_{i}", ellipsoid, color)
+            meshcat.SetTransform(f"{path}/caps_{i}", np.array([
+                [1, 0, 0, x],
+                [0, 1, 0, y],
+                [0, 0, 1, z],
+                [0, 0, 0, 1]
+            ]))
 
 def draw_path(meshcat, path_vertices, indices, path="rrt", linewidth=1.0, color=Rgba(0, 0, 0, 1)):
     graph = nx.DiGraph()
